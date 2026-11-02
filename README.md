@@ -55,9 +55,10 @@ directly with no wrapper. When a session ends, xmas prints its id and the comman
 - **Lights** string along Claude's rules and chase while a turn is running.
 - **Mascot** gets a red coat and a Santa hat.
 - **Words**: spinner verbs, tips and the finished-turn line are swapped for winter ones.
+- **Sleigh**: every few minutes (and sometimes when a turn finishes) a sleigh and reindeer fly through empty rows, dropping the odd gift, carrot and cookie. They only use blank cells, so they never cover text. Off in the `--calm` look.
 - **Band** (the `--max` look): a greeting and countdown across the top row.
 
-Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look.
+Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look, `Ctrl+Alt+R` call the sleigh now.
 
 ## Config
 

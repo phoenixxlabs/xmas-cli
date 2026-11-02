@@ -120,6 +120,9 @@ export function runHost(opts: HostOptions): Promise<number> {
       } else if (name === 'lights') {
         cfg.lights.enabled = !cfg.lights.enabled
         comp.toast.show(`lights ${cfg.lights.enabled ? 'on' : 'off'}`, now)
+      } else if (name === 'flyby') {
+        comp.flyby.trigger()
+        comp.toast.show('here they come', now)
       } else if (name === 'preset') {
         preset = PRESET_ORDER[(PRESET_ORDER.indexOf(preset) + 1) % PRESET_ORDER.length]!
         const warn = (m: string) => log(`config: ${m}`)

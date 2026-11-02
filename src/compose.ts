@@ -7,6 +7,7 @@ import { drawBand } from './fx/frame.js'
 import { drawLights } from './fx/lights.js'
 import { drawLogo } from './fx/logo.js'
 import { drawWords } from './fx/words.js'
+import { Flyby } from './fx/sleigh.js'
 import { Snow } from './fx/snow.js'
 import { Toast } from './fx/toast.js'
 import type { CursorState } from './render.js'
@@ -19,6 +20,7 @@ export interface FrameResult {
 
 export class Compositor {
   readonly snow: Snow
+  readonly flyby: Flyby
   readonly toast = new Toast()
   private base = new Grid(1, 1)
   private out = new Grid(1, 1)
@@ -35,11 +37,13 @@ export class Compositor {
 
   constructor(public cfg: Config) {
     this.snow = new Snow(cfg.snow)
+    this.flyby = new Flyby(cfg.flyby)
   }
 
   setConfig(cfg: Config): void {
     this.cfg = cfg
     this.snow.cfg = cfg.snow
+    this.flyby.cfg = cfg.flyby
   }
 
   resize(cols: number, rows: number, top: number, childRows: number): void {
@@ -49,6 +53,7 @@ export class Compositor {
     this.scene = emptyScene(this.out)
     this.sceneVersion = -1
     this.snow.resize(cols, rows)
+    this.flyby.resize(cols)
   }
 
   get currentScene(): Scene {
@@ -84,7 +89,11 @@ export class Compositor {
       drawLogo(out, scene.logo, this.cfg.logo)
       drawWords(out, this.cfg.words)
       drawLights(out, scene, this.t, scene.working, this.cfg.lights)
-      if (opts.animate) this.snow.update(dt, scene)
+      if (opts.animate) {
+        this.flyby.update(dt, out, scene)
+        this.snow.update(dt, scene)
+      }
+      this.flyby.draw(out, scene, this.t)
       this.snow.draw(out, scene, cursor.visible ? cursor : undefined)
       drawBand(out, 0, this.t, nowMs, this.cfg.band)
       if (this.cfg.toast) this.toast.draw(out, nowMs)
@@ -107,11 +116,12 @@ export class Compositor {
       this.turnsFinished++
       this.onEvent?.(`turn finished (#${this.turnsFinished})`)
       if (this.cfg.burst) this.snow.burst(1.2)
+      this.flyby.celebrate()
     }
   }
 
   /** true while something on screen keeps changing by itself */
   get isAnimated(): boolean {
-    return this.cfg.snow.enabled || this.cfg.lights.enabled || this.cfg.band.enabled
+    return this.cfg.snow.enabled || this.cfg.lights.enabled || this.cfg.band.enabled || this.cfg.flyby.enabled
   }
 }

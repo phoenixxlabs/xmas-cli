@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A sleigh and reindeer fly across the screen now and then (`flyby` in the config, `Ctrl+Alt+R` to call them).
+
 ## 0.2.0
 
 - Codex support: `xmas --codex`, with `--claude` to switch back and an `agent` config key for the default.
