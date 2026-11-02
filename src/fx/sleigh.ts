@@ -23,15 +23,17 @@ const INK: Record<string, Color> = {
   R: hex('#b82a3c'), // sleigh shadow
   t: hex('#d9b98a'), // sack
   g: hex('#f2c14e'), // runners, reins
-  w: hex('#f4f8ff'), // trim
+  w: hex('#f4f8ff'), // trim and beard
+  k: hex('#f3c9a5'), // face
 }
 
 // each sprite row is [art, ink]; ink is padded with its last letter, a space means "no paint"
 type Row = [string, string]
 
 const SLEIGH: Row[] = [
-  ['    ▗▄▖  ▗▄▖ ', '    rrr  ttt '],
-  [' ▟▇▇▇▇▇▇▇▇▇▙ ', 'r'],
+  ['    ▗▟▙▖  ▗▄▖', '    rrrr  ttt'], // hat, sack
+  ['   ▐▛▀▀▜▌▐██▌', '   wwkkwwtttt'], // face between the beard
+  [' ▟▇▇▇▇▇▇▇▇▇▙ ', ' rrrwwwwrrrrr '],
   [' ▜█████████▛ ', 'R'],
   ['▀▀▀▀▀▀▀▀▀▀▀▀▀', 'g'],
 ]
@@ -50,7 +52,7 @@ function deer(step: number, lead: boolean): Row[] {
 const GAP = 1 // cells of rein between neighbours
 const DEER_W = 11
 const SLEIGH_W = 13
-const HEIGHT = 4
+const HEIGHT = 5
 
 interface Item {
   x: number
@@ -240,8 +242,8 @@ export class Flyby {
       sprite(SLEIGH, 0, 0)
       let dx = SLEIGH_W
       for (let n = 0; n < f.deer; n++) {
-        put(x0 + dx - 1, f.y + 2, '─', INK[REINS]!)
-        sprite(deer(step, n === f.deer - 1), dx, 1)
+        put(x0 + dx - 1, f.y + 3, '─', INK[REINS]!)
+        sprite(deer(step, n === f.deer - 1), dx, 2)
         dx += DEER_W + GAP
       }
     }
