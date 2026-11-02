@@ -19,7 +19,7 @@ export class ChildPty {
     let file = spec.bin
     let args = spec.args
     if (/\.(mjs|cjs|js)$/i.test(file)) {
-      // lets tests (and curious people) point XMAS_CLAUDE_BIN at a node script
+      // so the tests can point XMAS_CLAUDE_BIN at a node script
       args = [file, ...args]
       file = process.execPath
     }
@@ -75,9 +75,9 @@ export class ChildPty {
   }
 }
 
-/** Finds the claude executable: explicit path → PATH (.exe preferred) → npm global install. */
+// explicit path, then PATH (.exe first), then the npm global install
 export function resolveClaude(explicit?: string | null): string | null {
-  // an explicit choice (env var, then config) wins whatever it is, as long as it exists
+  // an explicit choice wins as long as the file exists
   for (const c of [process.env.XMAS_CLAUDE_BIN, explicit]) {
     if (c && isFile(c)) return c
   }
@@ -103,7 +103,7 @@ export function resolveClaude(explicit?: string | null): string | null {
   for (const c of candidates) {
     if (!isFile(c)) continue
     if (/\.exe$/i.test(c) || process.platform !== 'win32') return c
-    // npm's claude.cmd just launches the native exe next to node_modules; prefer that
+    // npm's claude.cmd only launches the native exe, so use that directly
     const native = path.join(
       path.dirname(c),
       'node_modules',

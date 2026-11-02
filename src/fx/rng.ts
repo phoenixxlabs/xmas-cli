@@ -1,4 +1,4 @@
-/** small seeded PRNG so effects are reproducible in tests */
+// small seeded rng so the tests are repeatable
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0
   return () => {

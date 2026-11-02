@@ -52,15 +52,23 @@ directly with no wrapper. When a session ends, xmas prints its id and the comman
 
 ## What you get
 
-- **Snow** falls in empty space only: never over text, never in the prompt box. Flakes that reach one of
-  Claude's rules settle into small drifts and melt.
-- **Lights** string along Claude's rules and chase while a turn is running.
-- **Mascot** gets a red coat and a Santa hat.
-- **Words**: spinner verbs, tips and the finished-turn line are swapped for winter ones.
-- **Sleigh**: every few minutes (and sometimes when a turn finishes) a sleigh and reindeer fly through the highest empty rows, dropping presents. They only use blank cells, so they never cover text. Off in the `--calm` look.
-- **Visitor**: now and then a small Santa walks along the bottom to one treat left out for him (cookies, milk, hot cocoa or the reindeer's carrot), finishes it, says thanks and leaves a present. It is a different treat each visit, so the screen never fills up. `xmas --santa` calls him now.
-- **Codex logo**: Codex wipes its startup logo after a couple of seconds; xmas keeps a dim copy behind everything, so snow and the sleigh pass in front of it. Turn it off with `"codex": { "logo": false }`.
-- **Band** (the `--max` look): a greeting and countdown across the top row.
+Snow falls in empty space only, never over text and never in the prompt box. Flakes that reach one of
+Claude's rules settle into small drifts and melt. Lights run along the same rules and chase while a
+turn is running. The mascot gets a red coat and a Santa hat, and the spinner verbs, tips and the
+finished-turn line are swapped for winter ones. The `--max` look adds a greeting and countdown across
+the top row.
+
+A few things happen now and then:
+
+- A sleigh and reindeer fly through the highest empty rows, dropping presents. This happens every few
+  minutes and sometimes when a turn finishes. It's off in the `--calm` look.
+- A small Santa walks along the bottom to one treat left out for him (cookies, milk, cocoa or the
+  reindeer's carrot), finishes it, says thanks and leaves a present. It's a different treat each time.
+  `xmas --santa` calls him straight away.
+- Codex wipes its startup logo after a couple of seconds. xmas keeps a dim copy behind everything, so
+  the snow and the sleigh pass in front of it. Set `"codex": { "logo": false }` to turn that off.
+
+Everything here only paints blank cells, so none of it covers text.
 
 Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look, `Ctrl+Alt+R` call the sleigh now, `Ctrl+Alt+V` call the visitor.
 

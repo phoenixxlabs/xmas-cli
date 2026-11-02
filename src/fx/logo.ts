@@ -1,4 +1,4 @@
-// Santa hat for the mascot, and a red coat.
+// red coat and a santa hat for the mascot
 
 import { Grid, hex } from '../grid.js'
 import type { LogoHit } from '../scene.js'
@@ -22,7 +22,7 @@ export function drawLogo(g: Grid, logo: LogoHit | null, cfg: LogoConfig): void {
   const hy = logo.y - 1
   if (hy < 0) return
   const hx = logo.topX + 1
-  // needs five blank cells above the head
+  // the hat needs five blank cells above the head
   for (let k = 0; k < 6; k++) if (!g.isBlank(hy * g.cols + hx + k)) return
   g.set(hx, hy, '▗', RED)
   g.set(hx + 1, hy, '▄', RED)

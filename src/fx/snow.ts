@@ -1,7 +1,5 @@
-// Falling snow that respects the screen underneath.
-//  · flakes are only drawn in blank cells with horizontal clearance, so they never touch text
-//  · the prompt box and footer stay calm
-//  · a flake that reaches a horizontal rule settles as a small drift on top of it, and melts later
+// falling snow. only goes into blank cells with some room either side, keeps out of the prompt
+// box and footer, and settles into small drifts on claude's rules before melting
 
 import { Grid, hex } from '../grid.js'
 import type { Scene } from '../scene.js'
@@ -9,11 +7,11 @@ import { mulberry32 } from './rng.js'
 
 export interface SnowConfig {
   enabled: boolean
-  /** flakes per cell */
+  // flakes per cell
   density: number
-  /** 0 = still air, 1 = default breeze */
+  // 0 is still air
   wind: number
-  /** blank cells needed on both sides of a flake before it is shown */
+  // blank cells needed either side of a flake
   clearance: number
   drift: boolean
   glyphs: { far: string; mid: string; near: string }
@@ -22,9 +20,9 @@ export interface SnowConfig {
 interface Flake {
   y: number
   cy: number
-  /** shown column; it only changes in the same step as a row change, so a flake falls in a clean line */
+  // column the flake is drawn in, only changes with the row so flakes fall in clean lines
   cx: number
-  /** sideways progress, in columns, not yet applied */
+  // sideways movement that hasn't added up to a whole column yet
   lean: number
   vy: number
   layer: 0 | 1 | 2
@@ -63,7 +61,7 @@ export class Snow {
     this.fill(true)
   }
 
-  /** a sudden breeze: more motion for a moment */
+  // sudden breeze after a turn ends
   burst(strength = 1): void {
     this.gust = Math.min(3, this.gust + strength)
   }
@@ -106,7 +104,7 @@ export class Snow {
     this.gust *= Math.exp(-dt / 1.4)
     this.fill(false)
 
-    // a steady drift that only swells and eases, so flakes lean one way instead of swinging about
+    // steady lean with a slow swell, so flakes drift one way and don't swing about
     const breeze = this.cfg.wind * (0.5 + 0.25 * Math.sin(this.t * 0.13)) + this.gust * 2.4
     const fall = 1 + this.gust * 0.25
 
@@ -121,7 +119,7 @@ export class Snow {
         continue
       }
       if (cy !== f.cy) {
-        // drift sideways a whole column at a time, and only as the flake drops a row
+        // shift a whole column at a time, and only as the flake drops a row
         f.lean += ((breeze * k) / speed) * Math.max(1, cy - f.cy)
         const shift = Math.trunc(f.lean)
         f.lean -= shift
@@ -146,7 +144,7 @@ export class Snow {
       d.melt = this.t + 8 + this.rng() * 10
       return
     }
-    // keep drifts patchy: a ledge never fills past about a fifth of its width
+    // keep drifts patchy, a ledge never fills past about a fifth of its width
     const row = Math.floor(idx / this.cols)
     let inRow = 0
     for (const k of this.drifts.keys()) if (Math.floor(k / this.cols) === row) inRow++
@@ -154,7 +152,7 @@ export class Snow {
     this.drifts.set(idx, { depth: 1, melt: this.t + 8 + this.rng() * 10 })
   }
 
-  /** measures distance to the nearest painted cell, per row, capped at 255 */
+  // distance to the nearest painted cell on each row, capped at 255
   private measure(g: Grid, scene: Scene, cursor?: { x: number; y: number }): void {
     const { cols, rows } = g
     if (this.clear.length !== cols * rows) this.clear = new Uint8Array(cols * rows)
@@ -188,7 +186,7 @@ export class Snow {
     for (const [idx, d] of this.drifts) {
       const ledgeBelow = idx + cols < scene.ledge.length && scene.ledge[idx + cols] === 1
       if (!ledgeBelow || this.clear[idx]! < 1) {
-        // the ledge moved or text covers the spot; forget it (it re-forms elsewhere)
+        // ledge moved or text covers it, drop the drift
         this.drifts.delete(idx)
         continue
       }
@@ -200,17 +198,17 @@ export class Snow {
           continue
         }
       }
-      // snow sits ON the line: an upper-half block whose bottom edge is where the line was
+      // snow sits on the line itself: an upper-half block, so it looks like it's resting there
       const color = DRIFT_COLORS[d.depth]!
       const rule = idx + cols
-      // the smallest drifts are a single quarter so lights still show between lumps
+      // the smallest drifts are one quarter block so the lights still show between lumps
       g.ch[rule] = d.depth === 1 ? ((idx % cols) % 2 ? '▘' : '▝') : '▀'
       g.fg[rule] = color
       g.at[rule] = 0
     }
 
     const glyphs = [this.cfg.glyphs.far, this.cfg.glyphs.mid, this.cfg.glyphs.near]
-    // the small flakes sit high, middle or low in their cell, which triples their vertical resolution
+    // small flakes sit high, middle or low in the cell: three steps a row instead of one
     const fine = this.cfg.glyphs.far === '·'
     for (const f of this.flakes) {
       const x = f.cx

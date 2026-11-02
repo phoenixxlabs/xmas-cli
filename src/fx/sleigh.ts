@@ -1,9 +1,5 @@
-// Every few minutes a sleigh and its reindeer cross the screen through whatever empty rows
-// there are, trailing sparkles and dropping the odd gift, carrot and cookie. Everything is
-// drawn into blank cells only, so a flight can never cover text.
-//
-// The art is drawn as pixels, two to a cell: a half block shows the top pixel as its
-// foreground and the bottom pixel as its background.
+// a sleigh and reindeer fly across the empty rows every few minutes, trailing sparkles and
+// dropping presents. like the other effects they only paint blank cells, never text
 
 import { A_BOLD, Color, Grid, hex, mix } from '../grid.js'
 import type { Scene } from '../scene.js'
@@ -12,14 +8,14 @@ import { mulberry32 } from './rng.js'
 
 export interface FlybyConfig {
   enabled: boolean
-  /** seconds between flights: a random gap between these two */
+  // seconds between flights, somewhere between min and max
   minGap: number
   maxGap: number
-  /** let presents fall off the sleigh */
+  // drop presents
   items: boolean
 }
 
-// Santa is 8 pixels wide and sits on top of the sleigh, which starts at pixel row 8.
+// santa is 8 pixels wide and sits above the sleigh, which starts at pixel row 8
 const SANTA = ['..RRRW..', '.RRRRRR.', '.WWWWWW.', '.SSSSSS.', '.SKSSKS.', '.WWWWWW.', '.WWWWWW.', 'RRRWWRRR']
 
 const SACK = ['.YY.', 'TTTT', 'TTTT', 'TTTT', 'TTTT']
@@ -33,7 +29,7 @@ const SLEIGH = [
   'YYYYYYYYYYYYYYYYYY',
 ]
 
-/** one reindeer facing right, 14 wide and 6 tall; `step` picks one of two leg positions */
+// one reindeer facing right, step picks the leg pose
 function deer(step: number, lead: boolean): string[] {
   const legs = step ? '..b.b..b..b...' : '.b..b...b.b...'
   return [
@@ -67,7 +63,7 @@ const SPARKS = ['·', '.', '*']
 const SPARK_COLOR = hex('#bfe3ff')
 const SPARK_FADE = hex('#2c4058')
 
-/** the whole team as a grid of pixel letters ('.' is empty) */
+// the whole team as rows of pixel letters
 function train(deerCount: number, step: number): string[] {
   const width = SLEIGH_W + deerCount * (DEER_W + GAP)
   const px = Array.from({ length: ROWS }, () => Array<string>(width).fill('.'))
@@ -111,17 +107,16 @@ export class Flyby {
     return minGap + this.rng() * Math.max(0, maxGap - minGap)
   }
 
-  resize(_cols: number): void {
+  resize(): void {
     this.active = null
     this.items = []
   }
 
-  /** fly as soon as there is room */
   trigger(delay = 0): void {
     this.nextAt = this.clock + delay
   }
 
-  /** a small chance of a flight when a turn finishes, as long as one hasn't just gone by */
+  // small chance of a flight when a turn finishes
   celebrate(): void {
     if (this.active || this.clock - this.lastEnd < 60) return
     if (this.rng() < 0.3) this.nextAt = Math.min(this.nextAt, this.clock)
@@ -141,7 +136,7 @@ export class Flyby {
     } else {
       const f = this.active
       f.x += dt * 13
-      // text that arrives under the sleigh pushes it to the next empty stretch, or ends the flight
+      // text showed up under us: move to the next empty stretch or give up
       if (!this.rowsFree(g, f.y)) {
         const y = this.freeRows(g, scene)[0]
         if (y === undefined) {
@@ -161,7 +156,7 @@ export class Flyby {
     this.fall(dt, g, scene)
   }
 
-  /** looks for the highest stretch of rows that is empty right now; tries again soon if there is none */
+  // finds the highest empty stretch, or tries again in a bit
   private start(g: Grid, scene: Scene): void {
     const deer = Math.max(1, Math.min(3, Math.floor((g.cols - SLEIGH_W) / (DEER_W + GAP + 3))))
     const width = SLEIGH_W + deer * (DEER_W + GAP)
@@ -174,7 +169,7 @@ export class Flyby {
       this.nextAt = this.clock + 20
       return
     }
-    // fly high: the topmost empty stretch, give or take a row
+    // fly high: one of the top few free spots
     const y = free[Math.floor(this.rng() * Math.min(free.length, 3))]!
     this.active = { x: -width, y, width, deer }
     this.itemTimer = 1
@@ -188,7 +183,7 @@ export class Flyby {
     return busy <= g.cols * HEIGHT * 0.04
   }
 
-  /** every top row where the sleigh would fit over empty space, highest first */
+  // top rows where the sleigh fits over blank cells, highest first
   private freeRows(g: Grid, scene: Scene): number[] {
     const free: number[] = []
     for (let y = 1; y <= scene.noSnowFromRow - HEIGHT; y++) if (this.rowsFree(g, y)) free.push(y)
@@ -217,7 +212,7 @@ export class Flyby {
       const x = Math.round(it.x)
       const y = Math.floor(it.y)
       if (x < 0 || x >= g.cols || y > floor) return false
-      // land (and vanish) on anything solid
+      // a present lands on anything solid and disappears
       return y + 1 > floor || g.isBlank((y + 1) * g.cols + x) || !g.inside(x, y + 1)
     })
   }
@@ -248,7 +243,7 @@ export class Flyby {
     if (f) {
       const x0 = Math.round(f.x)
 
-      // the sparkle trail first, so the sprites win any shared cell
+      // sparkles go first so the sprites win any shared cell
       for (let d = 1; d <= 16; d++) {
         const x = x0 - d
         for (let r = 0; r < HEIGHT; r++) {

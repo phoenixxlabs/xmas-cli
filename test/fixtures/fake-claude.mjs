@@ -1,6 +1,6 @@
-// A scriptable stand-in for Claude Code's fullscreen UI, used to test the wrapper.
-// It does what the real one does on the terminal: alternate screen, mouse, bracketed paste,
-// focus events, a prompt box between two rules, OSC 52 / title, and exit codes.
+// stand-in for claude's fullscreen ui so the wrapper can be tested without the real thing: alt
+// screen, mouse, bracketed paste, focus events, a prompt box between two rules, osc 52, title and
+// exit codes
 
 const args = process.argv.slice(2)
 if (args.includes('-p') || args.includes('--print')) {

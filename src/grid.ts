@@ -1,6 +1,6 @@
-// Cell grid shared by the emulator snapshot, the effects and the renderer.
+// the cell grid shared by the emulator snapshot, the effects and the renderer
 //
-// A colour is one uint32: top byte = mode (0 default, 1 palette, 2 rgb), low 24 bits = value.
+// a colour is one uint32: the top byte is the mode (0 default, 1 palette, 2 rgb), the low 24 bits the value
 
 export type Color = number
 
@@ -18,8 +18,8 @@ export function hex(s: string): Color {
   return rgb((n >> 16) & 255, (n >> 8) & 255, n & 255)
 }
 
-// Standard xterm palette for the 16 ANSI colours (used only when mixing; the terminal
-// still receives the original palette index).
+// the usual xterm palette for the 16 ansi colours, only used when mixing. the terminal still
+// gets the original palette index
 const ANSI16: [number, number, number][] = [
   [0, 0, 0],
   [205, 49, 49],
@@ -77,7 +77,7 @@ export const A_INVISIBLE = 64
 export const A_STRIKE = 128
 export const A_OVERLINE = 256
 
-/** cell width marker */
+// cell width
 export const W_NARROW = 0
 export const W_LEAD = 1 // first half of a double-width character
 export const W_TAIL = 2 // second half; carries no glyph
@@ -129,7 +129,7 @@ export class Grid {
     this.w.set(o.w)
   }
 
-  /** copy `src` into this grid with its top-left at (0, y0), clipped */
+  // copy src in with its top-left at (0, y0), clipped
   blit(src: Grid, y0: number): void {
     const cols = Math.min(src.cols, this.cols)
     for (let y = 0; y < src.rows; y++) {
@@ -157,7 +157,7 @@ export class Grid {
     this.w[i] = 0
   }
 
-  /** write a string of narrow characters, returns the x after the last one */
+  // writes narrow characters, returns the x after the last one
   text(x: number, y: number, s: string, fg: Color = 0, bg: Color = 0, at = 0): number {
     for (const c of s) {
       this.set(x, y, c, fg, bg, at)
@@ -166,7 +166,7 @@ export class Grid {
     return x
   }
 
-  /** true when nothing is painted in the cell: a plain space on the default background */
+  // nothing painted: a plain space on the default background
   isBlank(i: number): boolean {
     const c = this.ch[i]
     return (

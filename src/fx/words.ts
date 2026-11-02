@@ -1,5 +1,5 @@
-// Claude's finished-turn line ("✻ Churned for 2s · done 10:37") takes its past-tense word from
-// a list that no setting reaches, so the winter word is swapped in on screen.
+// claude's finished-turn line ("✻ Churned for 2s · done 10:37") takes its word from a list that no
+// setting reaches, so we swap in the winter word on screen
 
 import { Grid } from '../grid.js'
 
@@ -29,7 +29,7 @@ function hash(s: string): number {
   return n
 }
 
-/** Swaps the verb on any finished-turn row. Returns how many rows changed. */
+// returns how many rows changed
 export function drawWords(g: Grid, cfg: WordsConfig): number {
   if (!cfg.enabled) return 0
   let changed = 0
@@ -45,7 +45,7 @@ export function drawWords(g: Grid, cfg: WordsConfig): number {
     while (x < g.cols && isLetter(g.ch[row + x]!)) x++
     const end = x
     if (end - start < 3) continue
-    // the verb must be followed by " for <duration>"
+    // the verb has to be followed by ' for <duration>'
     let tail = ''
     for (let k = end; k < g.cols; k++) tail += g.ch[row + k] || ' '
     if (!/^ for \d+(?:h \d+m|m \d+s|s)\b/.test(tail)) continue

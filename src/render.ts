@@ -1,5 +1,5 @@
-// Grid → ANSI. Keeps a copy of what the terminal currently shows and emits only the
-// difference, wrapped in synchronized-output markers so the frame lands atomically.
+// grid to ansi. remembers what the terminal shows and writes only the difference, inside
+// synchronized-output markers so a frame lands in one go
 
 import {
   A_BLINK,
@@ -25,7 +25,7 @@ export interface CursorState {
 }
 
 const ESC = '\x1b['
-/** unchanged cells we are willing to rewrite rather than pay for a cursor jump */
+// unchanged cells we'd rather rewrite than pay for a cursor jump
 const GAP = 4
 
 function colorSgr(c: number, fg: boolean): string {
@@ -71,14 +71,14 @@ export class Renderer {
   private lastCursor: CursorState | null = null
   private lastShape = -1
 
-  /** forget what the terminal shows; the next frame repaints everything */
+  // forget what's on screen, the next frame repaints all of it
   invalidate(): void {
     this.prev = null
     this.lastCursor = null
     this.lastShape = -1
   }
 
-  /** Returns the bytes to write, or '' when the screen and cursor are already right. */
+  // the bytes to write, or '' if nothing changed
   frame(next: Grid, cursor: CursorState | null): string {
     const full = !this.prev || this.prev.cols !== next.cols || this.prev.rows !== next.rows
     const prev = full ? null : this.prev!
@@ -91,7 +91,7 @@ export class Renderer {
     for (let y = 0; y < next.rows; y++) {
       let x = 0
       while (x < cols) {
-        // find the next changed cell
+        // next changed cell
         let start = -1
         for (; x < cols; x++) {
           const i = y * cols + x
@@ -102,7 +102,7 @@ export class Renderer {
         }
         if (start < 0) break
         if (next.w[y * cols + start] === W_TAIL && start > 0) start--
-        // extend over the changed run, bridging short unchanged gaps
+        // run over the changes, bridging short unchanged gaps
         let end = start
         let probe = start
         while (probe < cols) {

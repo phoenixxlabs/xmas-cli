@@ -1,5 +1,5 @@
-// Wraps @xterm/headless: feeds it the child's output, answers the child's terminal
-// queries, tracks the DEC modes we need to mirror, and snapshots the screen into a Grid.
+// wraps @xterm/headless: parses the child's output, answers its terminal queries and keeps track
+// of the input modes we have to pass on to the real terminal
 
 import os from 'node:os'
 import xterm from '@xterm/headless'
@@ -23,7 +23,7 @@ import {
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
 
-/** Colours we report when the child asks (OSC 10/11/12): a dark winter night. */
+// what we answer when the child asks for the terminal colours (osc 10/11/12)
 const REPORT_COLORS: Record<number, string> = {
   10: 'rgb:eaea/f6f6/ffff',
   11: 'rgb:0b0b/1414/2020',
@@ -31,9 +31,9 @@ const REPORT_COLORS: Record<number, string> = {
 }
 
 export interface EmulatorHooks {
-  /** bytes the terminal answers with (DA, DSR, colour reports…); go to the child's stdin */
+  // what a terminal would answer (da, dsr, colour reports), goes to the child's stdin
   respond(data: string): void
-  /** raw sequences for the real terminal (clipboard, notifications, title, bell) */
+  // raw sequences for the real terminal: clipboard, notifications, title, bell
   forward(data: string): void
   log?(msg: string): void
 }
@@ -47,12 +47,12 @@ export interface CursorInfo {
 
 export class Emulator {
   readonly term: XTerminal
-  /** bumps whenever parsed output changed the screen */
+  // goes up whenever parsed output changed the screen
   version = 0
   readonly modes = new Map<number, boolean>()
   cursorVisible = true
   cursorShape = 0
-  /** while set and in the future, the child asked for a synchronized update: don't snapshot */
+  // the child asked for a synchronized update, don't snapshot until this passes
   syncUntil = 0
   titlePrefix = ''
 
@@ -101,7 +101,7 @@ export class Emulator {
       return false
     })
 
-    // clipboard, notifications, progress: pass through to the real terminal
+    // clipboard, notifications and progress go straight to the real terminal
     for (const id of [9, 99, 777, 52, 7]) {
       p.registerOscHandler(id, (data) => {
         this.hooks.forward(`\x1b]${id};${data}\x1b\\`)
@@ -114,7 +114,7 @@ export class Emulator {
         return true
       })
     }
-    // colour queries: answer from our own palette; ignore attempts to set
+    // answer colour queries ourselves, ignore attempts to set them
     for (const id of [10, 11, 12]) {
       p.registerOscHandler(id, (data) => {
         if (data === '?') this.hooks.respond(`\x1b]${id};${REPORT_COLORS[id]}\x1b\\`)
@@ -150,7 +150,6 @@ export class Emulator {
     return { x: b.cursorX, y: b.cursorY, visible: this.cursorVisible, shape: this.cursorShape }
   }
 
-  /** Copies the visible screen into `g` (which must match our size). */
   snapshot(g: Grid): void {
     const buf = this.term.buffer.active
     const cell = buf.getNullCell()

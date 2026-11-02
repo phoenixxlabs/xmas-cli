@@ -1,7 +1,6 @@
-// Codex shows a large braille-art logo while it starts up and then wipes it. This keeps a
-// copy and paints it back, dim, behind everything else for the rest of the session. It is
-// drawn last and only into blank cells, so Codex's own text, the snow and the sleigh all
-// pass in front of it.
+// codex draws a big braille logo on startup and then wipes it. we keep a copy and put it back,
+// dim, behind everything for the rest of the session. it's drawn last and only into blank cells,
+// so codex's own text, the snow and the sleigh all end up in front of it
 
 import { Color, Grid, hex } from '../grid.js'
 
@@ -18,7 +17,7 @@ export class Watermark {
     return this.art !== null
   }
 
-  /** looks for the logo on the screen as the agent drew it, keeping the fullest copy seen */
+  // spots the logo as codex drew it and keeps the fullest copy
   capture(g: Grid): void {
     let start = -1
     for (let y = 0; y <= g.rows; y++) {

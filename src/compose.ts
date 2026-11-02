@@ -1,4 +1,4 @@
-// Builds one output frame: child screen → (band) → skin → snow → toast.
+// puts one frame together from the child's screen and the effects
 
 import type { Config } from './config.js'
 import type { Emulator } from './emulator.js'
@@ -26,7 +26,7 @@ export class Compositor {
   readonly visit: VisitingSanta
   readonly toast = new Toast()
   private readonly watermark = new Watermark()
-  /** which CLI is being drawn; the Codex logo backdrop only applies to codex */
+  // the codex logo backdrop only applies when this is codex
   agent: 'claude' | 'codex' = 'claude'
   private base = new Grid(1, 1)
   private out = new Grid(1, 1)
@@ -37,7 +37,7 @@ export class Compositor {
   private lastNow = 0
   private wasWorking = false
   private idleSince = 0
-  /** set when a turn just finished (consumed by the host for logging/tests) */
+  // counts finished turns, the tests look at it
   turnsFinished = 0
   onEvent?: (msg: string) => void
 
@@ -61,7 +61,7 @@ export class Compositor {
     this.scene = emptyScene(this.out)
     this.sceneVersion = -1
     this.snow.resize(cols, rows)
-    this.flyby.resize(cols)
+    this.flyby.resize()
     this.visit.resize()
   }
 
@@ -69,10 +69,7 @@ export class Compositor {
     return this.scene
   }
 
-  /**
-   * @param animate false freezes time (terminal blurred / safe mode)
-   * @param safe true shows the child's screen untouched
-   */
+  // animate false freezes time, safe shows the child's screen untouched
   render(emu: Emulator, nowMs: number, opts: { animate: boolean; safe: boolean }): FrameResult {
     const { base, out } = this
     emu.snapshot(base)
@@ -133,7 +130,7 @@ export class Compositor {
     }
   }
 
-  /** true while something on screen keeps changing by itself */
+  // true while anything keeps moving on its own
   get isAnimated(): boolean {
     return (
       this.cfg.snow.enabled ||

@@ -22,19 +22,20 @@ export interface Config {
   words: WordsConfig
   flyby: FlybyConfig
   visit: VisitConfig
-  /** a gust of snow when a turn finishes */
+  // gust of snow when a turn ends
   burst: boolean
   toast: boolean
   titlePrefix: string
-  /** which CLI `xmas` wraps when neither --claude nor --codex is given */
+  // used when neither --claude nor --codex is passed
   agent: 'claude' | 'codex'
-  /** skip permission prompts (claude --dangerously-skip-permissions / codex bypass) */
+  // skip permission prompts
   yolo: boolean
-  codex: { bin: string | null; /** keep Codex's startup logo as a dim backdrop */ logo: boolean }
+  // logo keeps codex's startup logo as a dim backdrop
+  codex: { bin: string | null; logo: boolean }
   claude: {
     bin: string | null
     injectSettings: boolean
-    /** merged over the winter defaults in the injected --settings file */
+    // merged over the winter defaults
     settings: Record<string, unknown>
   }
   hotkeys: { snow: string; lights: string; preset: string; flyby: string; visit: string }
@@ -103,7 +104,7 @@ export function configPath(): string {
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** copy values from `src` onto a clone of `base`, keeping only keys/types `base` knows */
+// copies values from src onto base, skipping keys base doesn't have and values of the wrong type
 export function overlay<T>(base: T, src: unknown, warn: (m: string) => void, where = ''): T {
   if (!isObj(base) || !isObj(src)) return base
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) }
@@ -146,7 +147,7 @@ export function resolveConfig(
   cfg.visit.maxGap = Math.max(cfg.visit.minGap, cfg.visit.maxGap)
   cfg.lights.spacing = Math.max(3, Math.min(30, Math.round(cfg.lights.spacing)))
   for (const k of ['far', 'mid', 'near'] as const) {
-    // glyphs must be exactly one cell wide; fall back otherwise
+    // has to be exactly one cell wide
     if ([...cfg.snow.glyphs[k]].length !== 1) cfg.snow.glyphs[k] = DEFAULTS.snow.glyphs[k]
   }
   return cfg
@@ -161,7 +162,7 @@ export function readConfigFile(file = configPath(), warn: (m: string) => void = 
   }
 }
 
-/** calls `onChange` (debounced) when the config file is edited */
+// debounced
 export function watchConfig(onChange: () => void, file = configPath()): () => void {
   let timer: NodeJS.Timeout | null = null
   let watcher: fs.FSWatcher | null = null

@@ -1,5 +1,5 @@
-// Tiny winter palette for xmas's own text output (help, session lists, exit hint).
-// Colour is off when stdout is not a terminal or NO_COLOR is set.
+// small winter palette for xmas's own output (help, session list, exit hint). no colour when
+// stdout isn't a terminal or NO_COLOR is set
 
 const on = (): boolean => !!process.stdout.isTTY && !process.env.NO_COLOR && process.env.TERM !== 'dumb'
 
@@ -14,8 +14,6 @@ export const frost = rgb(112, 140, 170)
 export const berry = rgb(232, 90, 104, true)
 export const pine = rgb(126, 200, 150)
 
-/** `❄ xmas` header line */
 export const brand = (): string => `${ice('❄')} ${snow('xmas')}`
 
-/** a thin icy rule */
 export const rule = (n = 44): string => frost('─'.repeat(n))

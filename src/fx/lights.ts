@@ -1,20 +1,19 @@
-// A string of lights along Claude's own horizontal rules. Bulbs twinkle while idle and
-// chase along the wire while a turn is running.
+// lights strung along claude's own horizontal rules
 
 import { A_BOLD, Color, Grid, hex, mix } from '../grid.js'
 import type { Scene } from '../scene.js'
 
 export interface LightsConfig {
   enabled: boolean
-  /** cells between bulbs */
+  // cells between bulbs
   spacing: number
 }
 
 const WIRE = hex('#3b5875')
 const BULBS = [hex('#ff4d5e'), hex('#46d68c'), hex('#ffd166'), hex('#6cc4ff')]
 
-// Bulb brightness moves in a few steps, a few times a second. Smooth fading would recolour every
-// bulb on every frame, and that stream of colour changes is what slows a terminal down.
+// brightness goes in a few coarse steps, a few times a second. fading smoothly recolours every
+// bulb on every frame and that flood of colour changes is what makes a terminal lag
 const steps = (v: number, n: number): number => Math.round(v * n) / n
 
 export function drawLights(g: Grid, scene: Scene, t: number, working: boolean, cfg: LightsConfig): void {

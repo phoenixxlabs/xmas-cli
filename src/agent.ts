@@ -1,4 +1,4 @@
-// Which CLI xmas wraps (claude or codex) and how xmas-level flags map onto each one.
+// claude vs codex: which binary to run and how our flags turn into its arguments
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -29,7 +29,7 @@ export const CLAUDE_SUBCOMMANDS = new Set([
   'upgrade',
 ])
 
-// codex subcommands that are not the interactive TUI (resume and fork are, so they stay out)
+// codex subcommands that aren't the tui (resume and fork are, so they're left out)
 export const CODEX_SUBCOMMANDS = new Set([
   'agents',
   'exec',
@@ -64,21 +64,19 @@ export const CODEX_SUBCOMMANDS = new Set([
 export interface AgentFlags {
   agent: AgentName
   yolo: boolean
-  /** undefined = not asked, true = resume (picker), string = a session id/name */
+  // true opens the picker, a string is a session id or name
   resume?: true | string
-  /** continue the most recent session */
   last: boolean
 }
 
 export interface BuildInput extends AgentFlags {
   rest: string[]
-  /** claude only: --settings <file> to inject, or null */
+  // claude only
   settingsPath?: string | null
 }
 
 const CODEX_SUBS_INTERACTIVE = new Set(['resume', 'fork'])
 
-/** Builds the argv handed to the agent. Pure, so it can be tested. */
 export function buildAgentArgs(i: BuildInput): string[] {
   const rest = [...i.rest]
   if (i.agent === 'claude') {
@@ -93,7 +91,7 @@ export function buildAgentArgs(i: BuildInput): string[] {
     return [...out, ...rest]
   }
 
-  // codex: global options first, then an optional `resume` subcommand, then the rest
+  // codex wants its flags in front of the resume subcommand
   const out: string[] = []
   if (
     i.yolo &&
@@ -109,7 +107,7 @@ export function buildAgentArgs(i: BuildInput): string[] {
   ) {
     out.push('--dangerously-bypass-approvals-and-sandbox')
   }
-  // the compositor only works on a full-screen viewport; inline mode scrolls history away
+  // inline mode scrolls history off the top and we only ever see the viewport
   if (!rest.includes('--no-alt-screen') && !rest.some((a) => a.startsWith('tui.alternate_screen'))) {
     out.push('-c', 'tui.alternate_screen="always"')
   }
@@ -147,7 +145,7 @@ const isFile = (p: string): boolean => {
   }
 }
 
-/** Finds the codex executable: env → config → PATH → the desktop app's bundled copy. */
+// env var, then config, then PATH, then the copy the desktop app ships
 export function resolveCodex(explicit?: string | null): string | null {
   for (const c of [process.env.XMAS_CODEX_BIN, explicit]) if (c && isFile(c)) return c
   const exts = process.platform === 'win32' ? ['.exe', '.cmd', ''] : ['']

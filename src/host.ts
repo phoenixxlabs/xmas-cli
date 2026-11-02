@@ -1,4 +1,4 @@
-// The orchestrator: real terminal ⇄ compositor ⇄ pty(claude).
+// ties it together: the real terminal, the compositor and the pty running the agent
 
 import { StringDecoder } from 'node:string_decoder'
 import { Compositor } from './compose.js'
@@ -14,17 +14,17 @@ export interface HostOptions {
   bin: string
   args: string[]
   cfg: Config
-  /** CLI-forced preset: survives config reloads */
+  // preset from the command line, survives config reloads
   preset?: PresetName
-  /** CLI toggles re-applied after every config resolve */
+  // command line toggles, applied again after every config reload
   tweak?: (cfg: Config) => void
   log: Logger
-  /** diagnose: draw the child with no effects at all */
+  // draw the child with no effects at all (for debugging)
   plain?: boolean
   agent?: 'claude' | 'codex'
-  /** fly the sleigh as soon as there is room, instead of waiting for the first gap */
+  // fly the sleigh as soon as there's room
   sleigh?: boolean
-  /** have the little Santa visit as soon as there is room */
+  // have the little santa visit as soon as there's room
   visit?: boolean
 }
 
@@ -44,7 +44,6 @@ export function runHost(opts: HostOptions): Promise<number> {
     if (opts.sleigh) comp.flyby.trigger(1.5)
     if (opts.visit) comp.visit.trigger(1.5)
 
-    let focused = true
     let finished = false
     let busy = false
     let again = false
@@ -87,7 +86,7 @@ export function runHost(opts: HostOptions): Promise<number> {
       {
         hotkey: (name) => hotkey(name),
         focus: (f) => {
-          focused = f
+          // redraw straight away when the window comes back
           if (f) request()
         },
         childWantsFocus: () => emu.modes.get(1004) === true,
@@ -213,11 +212,11 @@ export function runHost(opts: HostOptions): Promise<number> {
         if (safe) return
         if (comp.isAnimated || comp.toast.active(now)) request()
       },
-      // Windows timers tick every ~15.6ms, so ask for a little less than the frame time or 60 fps becomes 32
+      // windows timers tick about every 15.6ms, so ask for a bit under the frame time or 60fps quietly turns into 32
       Math.max(1, Math.floor(1000 / cfg.fps) - 2),
     )
 
-    // a line every 10s (only when logging) so slowdowns are visible without a profiler
+    // perf line every 10s, only when logging
     const perfTimer = setInterval(() => {
       const wall = Date.now() - wallMark
       const cpu = process.cpuUsage(cpuMark)
@@ -237,7 +236,7 @@ export function runHost(opts: HostOptions): Promise<number> {
 
     pty.onData((d) => {
       emu.write(d)
-      // render once the parser has applied this chunk
+      // wait for the parser to finish this chunk
       emu.term.write('', request)
     })
 

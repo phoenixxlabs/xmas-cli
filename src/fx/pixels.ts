@@ -1,5 +1,5 @@
-// Pixel art for the little scenes (sleigh, visitor). Two pixels share one terminal cell: a half
-// block shows the top pixel as its foreground and the bottom pixel as its background.
+// pixel art for the sleigh and the visitor. two pixels share one cell: a half block shows the
+// top one as its foreground and the bottom one as its background
 
 import { Color, Grid, hex } from '../grid.js'
 
@@ -22,10 +22,7 @@ export const PIXEL: Record<string, Color> = {
   P: hex('#b46be0'), // purple present
 }
 
-/**
- * Paints pixel rows ('.' is empty) with the top-left pixel at column `x`, terminal row `y`.
- * Only blank cells are touched, and nothing is drawn below `floor`.
- */
+// '.' is empty. only blank cells get painted, and nothing below `floor`
 export function paintPixels(g: Grid, art: string[], x: number, y: number, floor: number): void {
   const put = (cx: number, cy: number, ch: string, fg: Color, bg: Color): void => {
     if (cx < 0 || cx >= g.cols || cy < 0 || cy > floor) return

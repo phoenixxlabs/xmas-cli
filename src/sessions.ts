@@ -1,4 +1,4 @@
-// Finds saved sessions of claude and codex so xmas can list them and print a resume hint on exit.
+// reads claude's and codex's saved sessions for `xmas sessions` and the exit hint
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -68,7 +68,7 @@ function claudeMeta(file: string): { cwd: string; title: string } {
   return { cwd, title: clip(title || firstUser) }
 }
 
-// `title` holds the file path until a row is filled in
+// title holds the file path until the row is filled in
 function listClaude(): SessionInfo[] {
   const root = path.join(claudeHome(), 'projects')
   const out: SessionInfo[] = []
@@ -155,7 +155,7 @@ function fill(s: SessionInfo, idx: Map<string, string>): SessionInfo {
     const m = claudeMeta(s.title)
     return { ...s, cwd: m.cwd || s.cwd, title: m.title }
   }
-  // the meta line is long (it embeds the base instructions), so pull the cwd out with a regex
+  // the meta line is huge (it carries the base instructions), so pull the cwd out with a regex
   const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(head(s.title, 64 * 1024))
   let cwd = ''
   if (m) {
@@ -170,10 +170,10 @@ function fill(s: SessionInfo, idx: Map<string, string>): SessionInfo {
 
 export interface ListOpts {
   agent: AgentName
-  /** only sessions started in this directory */
+  // only sessions started in this directory
   cwd?: string
   limit?: number
-  /** only sessions modified at or after this time (ms) */
+  // only sessions touched at or after this time (ms)
   since?: number
 }
 
@@ -213,7 +213,7 @@ export function formatSessions(rows: SessionInfo[], showCwd: boolean): string {
     .join('\n')
 }
 
-/** The most recent session of `agent` in `cwd` touched since `since`, or null. */
+// newest session of this agent in cwd that was touched since `since`
 export function sessionSince(agent: AgentName, cwd: string, since: number): SessionInfo | null {
   return listSessions({ agent, cwd, since, limit: 1 })[0] ?? null
 }

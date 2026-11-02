@@ -1,7 +1,6 @@
-// Now and then a small Santa walks in along the bottom of the screen to one treat left out for
-// him (cookies, a glass of milk, a carrot for the reindeer or hot cocoa), finishes it, says
-// thanks, leaves a present and walks off again. One treat per visit keeps the screen clear. Like
-// the sleigh it only paints blank cells.
+// every so often a small santa walks along the bottom to one treat left out for him (cookies,
+// milk, a carrot for the reindeer or cocoa), finishes it, says thanks, leaves a present and heads
+// off. one treat per visit so the screen doesn't fill up
 
 import { A_BOLD, Grid, hex } from '../grid.js'
 import type { Scene } from '../scene.js'
@@ -10,7 +9,7 @@ import { mulberry32 } from './rng.js'
 
 export interface VisitConfig {
   enabled: boolean
-  /** seconds between visits: a random gap between these two */
+  // seconds between visits, somewhere between min and max
   minGap: number
   maxGap: number
 }
@@ -20,7 +19,7 @@ const WALK_SPEED = 12 // columns per second
 const EAT_TIME = 1.2
 const SAY_COLOR = hex('#f6f9ff')
 
-// Santa faces right; `flip` mirrors him to walk the other way
+// faces right, flip walks him the other way
 function santa(frame: 'walk' | 'step' | 'eat' | 'chew', flip: boolean): string[] {
   const legs = frame === 'step' ? '..KK..' : '.K..K.'
   const arms = frame === 'eat' || frame === 'chew' ? 'RRRRRR' : '.RRRR.'
@@ -31,12 +30,12 @@ function santa(frame: 'walk' | 'step' | 'eat' | 'chew', flip: boolean): string[]
 
 export interface Treat {
   name: string
-  /** columns wide */
+  // columns wide
   width: number
-  /** how many bites, sips or nibbles it takes */
+  // how many bites or sips it takes
   steps: number
   say: string
-  /** the treat with `left` of its steps still to go, four pixel rows tall */
+  // the treat with `left` steps still to go, four pixel rows tall
   art(left: number): string[]
 }
 
@@ -93,7 +92,7 @@ export const TREATS: Treat[] = [
   },
 ]
 
-// a wrapped present with a gold ribbon and bow, in one of a few colours
+// wrapped present with a gold ribbon, in a few colours
 const GIFT_COLORS = ['R', 'U', 'E', 'P']
 const GIFT_W = 5
 const gift = (c: string): string[] => ['.Y.Y.', `${c}${c}Y${c}${c}`, `${c}${c}Y${c}${c}`, `${c}${c}Y${c}${c}`]
@@ -105,7 +104,7 @@ interface Visit {
   age: number
   treat: Treat
   giftColor: string
-  /** top row of the scene; Santa's feet are at the bottom of it */
+  // top row of the scene, santa's feet are on the bottom one
   y: number
   tableX: number
   standX: number
@@ -136,7 +135,6 @@ export class VisitingSanta {
     this.active = null
   }
 
-  /** visit as soon as there is room */
   trigger(delay = 0): void {
     this.nextAt = this.clock + delay
   }
@@ -159,16 +157,13 @@ export class VisitingSanta {
     }
   }
 
-  // arrival, three cookies, the carrot, the speech, then the walk back out of the left edge
+  // the timeline: arrive, eat, speak, then walk back out the left edge
   private duration(v: Visit): number {
     return v.arrive + v.treat.steps * EAT_TIME + 0.8 + 2.4 + (v.standX + SANTA_W) / WALK_SPEED + 2
   }
 
-  /**
-   * The lowest rows above the prompt area where Santa's whole walk and the table are clear,
-   * with a few cells to spare. Right-aligned notes such as a usage warning are not in the way
-   * as long as the table stops short of them.
-   */
+  // lowest spot above the prompt where the whole walk and the treat are clear, with a few cells
+  // to spare. notes aligned right (usage warnings and so on) are fine if the treat stops short
   private find(g: Grid, scene: Scene, treat: Treat): { y: number; tableX: number } | null {
     const floor = Math.min(scene.noSnowFromRow, g.rows) - 1
     const xs: number[] = []
@@ -177,14 +172,14 @@ export class VisitingSanta {
       const j = Math.floor(this.rng() * (i + 1))
       ;[xs[i], xs[j]] = [xs[j]!, xs[i]!]
     }
-    // stand a few rows up, clear of the notes and prompt box that hug the bottom
+    // a few rows up, so we're off the notes and the prompt box at the bottom
     for (let y = floor - HEIGHT + 1 - LIFT; y >= Math.max(1, floor - 12); y--) {
       for (const tableX of xs) if (this.clear(g, y, tableX, treat)) return { y, tableX }
     }
     return null
   }
 
-  /** nothing painted in Santa's rows from the left edge to just past the table */
+  // nothing painted from the left edge to just past the treat
   private clear(g: Grid, y: number, tableX: number, treat: Treat): boolean {
     const end = Math.min(g.cols, tableX + treat.width + GIFT_W + 1 + MARGIN)
     for (let r = y; r < y + HEIGHT; r++) {
@@ -198,7 +193,7 @@ export class VisitingSanta {
       this.nextAt = this.clock + 60
       return
     }
-    // a different treat each time
+    // never the same treat twice in a row
     let pick = Math.floor(this.rng() * TREATS.length)
     if (pick === this.last) pick = (pick + 1) % TREATS.length
     const treat = TREATS[pick]!
@@ -235,13 +230,13 @@ export class VisitingSanta {
     const speaking = v.age >= speakFrom && v.age < leaveAt
     const leaving = v.age >= leaveAt
 
-    // the treat and, once it is gone, the thank-you present
+    // the treat, and the present once it's gone
     if (v.age > 0.4) {
       paintPixels(g, treat.art(treat.steps - eaten), v.tableX, v.y, floor)
       if (v.age >= speakFrom) paintPixels(g, gift(v.giftColor), v.tableX + treat.width + 1, v.y, floor)
     }
 
-    // Santa: in from the left, eating, then back out the way he came
+    // santa walks in from the left, eats, then leaves the way he came
     let x: number
     let frame: 'walk' | 'step' | 'eat' | 'chew'
     const stride = Math.floor(v.age * 6) % 2 ? 'step' : 'walk'

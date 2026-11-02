@@ -1,4 +1,4 @@
-// Optional one-row header band: a string of lights with a greeting.
+// the greeting band along the top row (part of the max look)
 
 import { A_BOLD, Grid, hex, mix } from '../grid.js'
 

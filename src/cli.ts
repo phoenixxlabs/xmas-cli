@@ -220,7 +220,7 @@ export async function main(): Promise<number> {
   }
   const file = readConfigFile(undefined, warn)
   const filePreset = typeof (file as { preset?: unknown })?.preset === 'string'
-  // xmas is festive-and-then-some by default: --max unless a flag or the config says otherwise
+  // the default look is max, unless a flag or the config file says otherwise
   const cfg = resolveConfig(file, { preset: p.preset ?? (filePreset ? undefined : 'max'), warn })
   tweak(cfg)
 
@@ -297,7 +297,7 @@ export async function main(): Promise<number> {
             `  ${lab('list')}${ice(`xmas --${agent} sessions`)}\n\n`,
         )
       } else {
-        // an empty session is never saved by either agent
+        // neither agent saves a session nothing was sent in
         process.stdout.write(`\n${brand()} ${frost('· nothing to resume (no messages sent)')}\n\n`)
       }
     } catch (e) {

@@ -1,5 +1,5 @@
-// Screenshot tool: runs xmas around a command (the real claude by default), reads the
-// composed screen from a second emulator and paints it to a PNG with a monospace font.
+// screenshot tool: runs xmas around a command (the real claude by default), reads the composed
+// screen back through a second emulator and paints it to a PNG
 //
 //   node scripts/shot.mjs --out shots/idle.png [--args "--max"] [--cols 130] [--rows 38]
 //        [--bin path] [--wait 3500] [--type "hello"] [--then 1500] [--out2 shots/after.png]
