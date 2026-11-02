@@ -40,7 +40,7 @@ export interface Config {
 
 export const DEFAULTS: Config = {
   preset: 'festive',
-  fps: 24,
+  fps: 60,
   snow: {
     enabled: true,
     density: 0.011,
@@ -68,7 +68,7 @@ type Deep<T> = { [K in keyof T]?: T[K] extends object ? Deep<T[K]> : T[K] }
 
 export const PRESETS: Record<PresetName, Deep<Config>> = {
   calm: {
-    fps: 12,
+    fps: 30,
     snow: { density: 0.006, wind: 0.4, drift: false },
     lights: { spacing: 9 },
     burst: false,
@@ -76,7 +76,7 @@ export const PRESETS: Record<PresetName, Deep<Config>> = {
   },
   festive: {},
   max: {
-    fps: 30,
+    fps: 60,
     snow: { density: 0.022, wind: 1.5 },
     band: { enabled: true },
   },

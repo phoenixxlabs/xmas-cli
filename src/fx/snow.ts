@@ -20,15 +20,13 @@ export interface SnowConfig {
 }
 
 interface Flake {
-  x: number
   y: number
   cy: number
-  /** the column the flake is shown in; it only changes once x is clearly past the edge */
+  /** shown column; it only changes in the same step as a row change, so a flake falls in a clean line */
   cx: number
+  /** sideways progress, in columns, not yet applied */
+  lean: number
   vy: number
-  sway: number
-  phase: number
-  freq: number
   layer: 0 | 1 | 2
 }
 
@@ -86,14 +84,11 @@ export class Snow {
     const r = this.rng()
     const layer: 0 | 1 | 2 = r < 0.58 ? 0 : r < 0.9 ? 1 : 2
     return {
-      x: this.rng() * this.cols,
+      cx: Math.floor(this.rng() * this.cols),
+      lean: 0,
       y: anywhere ? this.rng() * this.rows : -this.rng() * 3,
       cy: -1,
-      cx: -1,
       vy: (2.5 + this.rng() * 0.9) * SPEED[layer]!,
-      sway: 0.1 + this.rng() * 0.3,
-      phase: this.rng() * 6.28,
-      freq: 0.25 + this.rng() * 0.35,
       layer,
     }
   }
@@ -118,23 +113,19 @@ export class Snow {
     for (let n = 0; n < this.flakes.length; n++) {
       const f = this.flakes[n]!
       const k = SPEED[f.layer]!
-      f.y += f.vy * fall * dt
-      f.x += (breeze * k + Math.sin(this.t * f.freq + f.phase) * f.sway) * dt
-      if (f.x < 0) {
-        f.x += this.cols
-        f.cx = -1
-      } else if (f.x >= this.cols) {
-        f.x -= this.cols
-        f.cx = -1
-      }
-      if (f.cx < 0 || f.x < f.cx - 0.3 || f.x >= f.cx + 1.3) f.cx = Math.floor(f.x)
-
+      const speed = f.vy * fall
+      f.y += speed * dt
       const cy = Math.floor(f.y)
       if (cy >= this.rows) {
         this.flakes[n] = this.spawn(false)
         continue
       }
       if (cy !== f.cy) {
+        // drift sideways a whole column at a time, and only as the flake drops a row
+        f.lean += ((breeze * k) / speed) * Math.max(1, cy - f.cy)
+        const shift = Math.trunc(f.lean)
+        f.lean -= shift
+        f.cx = (((f.cx + shift) % this.cols) + this.cols) % this.cols
         f.cy = cy
         if (this.cfg.drift && cy >= 0 && cy + 1 < this.rows) {
           const cx = f.cx
