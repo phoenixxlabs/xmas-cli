@@ -93,8 +93,10 @@ export const TREATS: Treat[] = [
   },
 ]
 
-const GIFT = ['.YY.', 'RYYR', 'RYYR', 'RRRR']
-const GIFT_W = 4
+// a wrapped present with a gold ribbon and bow, in one of a few colours
+const GIFT_COLORS = ['R', 'U', 'E', 'P']
+const GIFT_W = 5
+const gift = (c: string): string[] => ['.Y.Y.', `${c}${c}Y${c}${c}`, `${c}${c}Y${c}${c}`, `${c}${c}Y${c}${c}`]
 const SANTA_W = 6
 const LIFT = 3 // rows left between Santa's boots and the bottom of the screen area
 const MARGIN = 3 // cells kept clear to the right of the table
@@ -102,6 +104,7 @@ const MARGIN = 3 // cells kept clear to the right of the table
 interface Visit {
   age: number
   treat: Treat
+  giftColor: string
   /** top row of the scene; Santa's feet are at the bottom of it */
   y: number
   tableX: number
@@ -207,7 +210,15 @@ export class VisitingSanta {
     const standX = spot.tableX - SANTA_W - 1
     const arrive = (standX + SANTA_W) / WALK_SPEED + 0.8
     this.last = pick
-    this.active = { age: 0, treat, y: spot.y, tableX: spot.tableX, standX, arrive }
+    this.active = {
+      age: 0,
+      treat,
+      giftColor: GIFT_COLORS[Math.floor(this.rng() * GIFT_COLORS.length)]!,
+      y: spot.y,
+      tableX: spot.tableX,
+      standX,
+      arrive,
+    }
   }
 
   draw(g: Grid, scene: Scene): void {
@@ -227,7 +238,7 @@ export class VisitingSanta {
     // the treat and, once it is gone, the thank-you present
     if (v.age > 0.4) {
       paintPixels(g, treat.art(treat.steps - eaten), v.tableX, v.y, floor)
-      if (v.age >= speakFrom) paintPixels(g, GIFT, v.tableX + treat.width + 1, v.y, floor)
+      if (v.age >= speakFrom) paintPixels(g, gift(v.giftColor), v.tableX + treat.width + 1, v.y, floor)
     }
 
     // Santa: in from the left, eating, then back out the way he came

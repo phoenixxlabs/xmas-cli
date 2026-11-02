@@ -17,6 +17,9 @@ export const PIXEL: Record<string, Color> = {
   O: hex('#ff9f43'), // carrot
   G: hex('#5fcf80'), // carrot top
   g: hex('#8fb8d8'), // glass
+  U: hex('#4fa8e8'), // blue present
+  E: hex('#3fbf78'), // green present
+  P: hex('#b46be0'), // purple present
 }
 
 /**
