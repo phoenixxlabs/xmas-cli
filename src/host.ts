@@ -22,6 +22,8 @@ export interface HostOptions {
   /** diagnose: draw the child with no effects at all */
   plain?: boolean
   agent?: 'claude' | 'codex'
+  /** fly the sleigh as soon as there is room, instead of waiting for the first gap */
+  sleigh?: boolean
 }
 
 const MIN_FRAME_MS = 8
@@ -36,6 +38,7 @@ export function runHost(opts: HostOptions): Promise<number> {
     const comp = new Compositor(cfg)
     let preset: PresetName = cfg.preset
     comp.onEvent = (m) => log(m)
+    if (opts.sleigh) comp.flyby.trigger()
 
     let focused = true
     let finished = false

@@ -38,6 +38,7 @@ xmas --xmas-doctor
 | `xmas --continue`       | Continue the most recent session (`--last` also works) |
 | `xmas sessions [--all]` | List saved sessions; `--all` covers every folder       |
 | `xmas --safe`           | Keep the agent's own permission prompts                |
+| `xmas --sleigh`         | Send the sleigh across right away                      |
 | `xmas --calm`           | A quieter look (`--festive` sits in between)           |
 
 "Skipping permission prompts" means `claude --dangerously-skip-permissions` and

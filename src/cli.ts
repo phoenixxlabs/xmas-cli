@@ -34,6 +34,7 @@ function helpText(): string {
     row('--calm --festive --max', 'pick a look'),
     row('--no-snow --no-lights', 'switch single effects off'),
     row('--no-logo --band', 'hat off / greeting band on'),
+    row('--sleigh', 'send the sleigh across right away'),
     row('--xmas-doctor', 'check the install (also --xmas-config, --xmas-version)'),
     rule(),
     frost(`Anything else goes to the agent; its own flags: ${ice('xmas --claude --help')}`),
@@ -48,6 +49,7 @@ interface Parsed {
   yolo?: boolean
   resume?: true | string
   last: boolean
+  sleigh: boolean
   noSnow: boolean
   noLights: boolean
   noLogo: boolean
@@ -64,6 +66,7 @@ interface Parsed {
 
 export function parseArgs(argv: string[]): Parsed {
   const p: Parsed = {
+    sleigh: false,
     last: false,
     noSnow: false,
     noLights: false,
@@ -98,6 +101,7 @@ export function parseArgs(argv: string[]): Parsed {
     else if (a === '--no-lights') p.noLights = true
     else if (a === '--no-logo') p.noLogo = true
     else if (a === '--band') p.band = true
+    else if (a === '--sleigh') p.sleigh = true
     else if (a === '--xmas-plain') p.plain = true
     else if (a === '--xmas-no-settings') p.noSettings = true
     else if (a === '--xmas-doctor') p.doctor = true
@@ -208,6 +212,7 @@ export async function main(): Promise<number> {
     if (p.noLights) cfg.lights.enabled = false
     if (p.noLogo) cfg.logo.enabled = false
     if (p.band) cfg.band.enabled = true
+    if (p.sleigh) cfg.flyby.enabled = true
   }
   const file = readConfigFile(undefined, warn)
   const filePreset = typeof (file as { preset?: unknown })?.preset === 'string'
@@ -263,7 +268,17 @@ export async function main(): Promise<number> {
     settingsPath,
   })
   const started = Date.now()
-  const code = await runHost({ bin, args, cfg, preset: p.preset, tweak, log, plain: p.plain, agent })
+  const code = await runHost({
+    bin,
+    args,
+    cfg,
+    preset: p.preset,
+    tweak,
+    log,
+    plain: p.plain,
+    agent,
+    sleigh: p.sleigh,
+  })
   if (tty && !p.plain) {
     try {
       const s = sessionSince(agent, process.cwd(), started - 2000)
