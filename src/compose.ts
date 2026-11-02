@@ -12,6 +12,7 @@ import { Snow } from './fx/snow.js'
 import { VisitingSanta } from './fx/visit.js'
 import { Toast } from './fx/toast.js'
 import { Watermark } from './fx/watermark.js'
+import { LinkSpan, applyLinks, scanLinks } from './links.js'
 import type { CursorState } from './render.js'
 import { Scene, emptyScene, scanScene } from './scene.js'
 
@@ -32,6 +33,8 @@ export class Compositor {
   private out = new Grid(1, 1)
   private scene: Scene = emptyScene(this.out)
   private sceneVersion = -1
+  private linkVersion = -1
+  private linkSpans: LinkSpan[] = []
   private top = 0
   private t = 0
   private lastNow = 0
@@ -60,6 +63,7 @@ export class Compositor {
     this.base = new Grid(cols, childRows)
     this.scene = emptyScene(this.out)
     this.sceneVersion = -1
+    this.linkVersion = -1
     this.snow.resize(cols, rows)
     this.flyby.resize()
     this.visit.resize()
@@ -75,6 +79,11 @@ export class Compositor {
     emu.snapshot(base)
     out.clear()
     out.blit(base, this.top)
+    if (emu.version !== this.linkVersion) {
+      this.linkSpans = scanLinks(out)
+      this.linkVersion = emu.version
+    }
+    applyLinks(out, this.linkSpans)
     if (this.agent === 'codex' && this.cfg.codex.logo) this.watermark.capture(out)
 
     const dt = this.lastNow ? (nowMs - this.lastNow) / 1000 : 0

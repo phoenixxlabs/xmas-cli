@@ -19,6 +19,7 @@ import {
   W_TAIL,
   pal,
 } from './grid.js'
+import { linkId } from './links.js'
 
 const { Terminal } = xterm
 type XTerminal = InstanceType<typeof Terminal>
@@ -55,6 +56,8 @@ export class Emulator {
   // the child asked for a synchronized update, don't snapshot until this passes
   syncUntil = 0
   titlePrefix = ''
+  // xterm's link ids to ours
+  private links = new Map<number, number>()
 
   constructor(
     cols: number,
@@ -165,6 +168,7 @@ export class Emulator {
           g.bg[i] = 0
           g.at[i] = 0
           g.w[i] = 0
+          g.lk[i] = 0
           continue
         }
         line.getCell(x, cell)
@@ -190,6 +194,7 @@ export class Emulator {
         if (cell.isStrikethrough()) at |= A_STRIKE
         if (cell.isOverline()) at |= A_OVERLINE
         g.at[i] = at
+        g.lk[i] = this.linkAt(cell)
         if (width === 0) {
           g.ch[i] = ''
           g.w[i] = W_TAIL
@@ -199,6 +204,27 @@ export class Emulator {
         }
       }
     }
+  }
+
+  // osc 8 links are kept by xterm, we only need their uri
+  private linkAt(cell: unknown): number {
+    // the cell object is reused, so stale extended attrs hang around unless the flag is checked
+    const c = cell as { hasExtendedAttrs?: () => number; extended?: { urlId: number } }
+    if (!c.hasExtendedAttrs?.()) return 0
+    const urlId = c.extended?.urlId
+    if (!urlId) return 0
+    let id = this.links.get(urlId)
+    if (id === undefined) {
+      const core = (
+        this.term as unknown as {
+          _core?: { _oscLinkService?: { getLinkData(n: number): { uri?: string } | undefined } }
+        }
+      )._core
+      const uri = core?._oscLinkService?.getLinkData(urlId)?.uri
+      id = uri ? linkId(uri) : 0
+      this.links.set(urlId, id)
+    }
+    return id
   }
 
   dispose(): void {

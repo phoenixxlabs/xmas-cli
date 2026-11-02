@@ -4,7 +4,9 @@ import { StringDecoder } from 'node:string_decoder'
 import { Compositor } from './compose.js'
 import { Config, PRESET_ORDER, PresetName, readConfigFile, resolveConfig, watchConfig } from './config.js'
 import { Emulator } from './emulator.js'
+import type { Grid } from './grid.js'
 import { InputRouter } from './input.js'
+import { linkUri, openTarget } from './links.js'
 import type { Logger } from './log.js'
 import { ChildPty } from './pty.js'
 import { Renderer } from './render.js'
@@ -46,6 +48,7 @@ export function runHost(opts: HostOptions): Promise<number> {
 
     let finished = false
     let busy = false
+    let lastGrid: Grid | null = null
     let again = false
     let faults = 0
     let safe = !!opts.plain
@@ -90,6 +93,12 @@ export function runHost(opts: HostOptions): Promise<number> {
           if (f) request()
         },
         childWantsFocus: () => emu.modes.get(1004) === true,
+        linkAt: (x, y) => {
+          const g = lastGrid
+          if (!g || x < 0 || y < 0 || x >= g.cols || y >= g.rows) return null
+          return linkUri(g.lk[y * g.cols + x]!) ?? null
+        },
+        open: openTarget,
         topOffset: () => top,
         childRows: () => emu.rows,
       },
@@ -164,6 +173,7 @@ export function runHost(opts: HostOptions): Promise<number> {
         const animate = !safe && (comp.isAnimated || comp.toast.active(now))
         const { grid, cursor } = comp.render(emu, now, { animate, safe })
         term.mirror(emu.modes)
+        lastGrid = grid
         const bytes = renderer.frame(grid, cursor)
         lastFrameAt = now
         frames++

@@ -92,6 +92,8 @@ export class Grid {
   readonly bg: Uint32Array
   readonly at: Uint16Array
   readonly w: Uint8Array
+  // hyperlink id from links.ts, 0 for none
+  readonly lk: Uint32Array
 
   constructor(cols: number, rows: number) {
     this.cols = cols
@@ -102,6 +104,7 @@ export class Grid {
     this.bg = new Uint32Array(n)
     this.at = new Uint16Array(n)
     this.w = new Uint8Array(n)
+    this.lk = new Uint32Array(n)
   }
 
   idx(x: number, y: number): number {
@@ -118,6 +121,7 @@ export class Grid {
     this.bg.fill(0)
     this.at.fill(0)
     this.w.fill(0)
+    this.lk.fill(0)
   }
 
   copyFrom(o: Grid): void {
@@ -127,6 +131,7 @@ export class Grid {
     this.bg.set(o.bg)
     this.at.set(o.at)
     this.w.set(o.w)
+    this.lk.set(o.lk)
   }
 
   // copy src in with its top-left at (0, y0), clipped
@@ -143,6 +148,7 @@ export class Grid {
         this.bg[d] = src.bg[s]!
         this.at[d] = src.at[s]!
         this.w[d] = src.w[s]!
+        this.lk[d] = src.lk[s]!
       }
     }
   }
@@ -155,6 +161,7 @@ export class Grid {
     this.bg[i] = bg
     this.at[i] = at
     this.w[i] = 0
+    this.lk[i] = 0
   }
 
   // writes narrow characters, returns the x after the last one
@@ -196,7 +203,8 @@ export class Grid {
       this.fg[i] === o.fg[i] &&
       this.bg[i] === o.bg[i] &&
       this.at[i] === o.at[i] &&
-      this.w[i] === o.w[i]
+      this.w[i] === o.w[i] &&
+      this.lk[i] === o.lk[i]
     )
   }
 }

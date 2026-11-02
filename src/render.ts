@@ -16,6 +16,7 @@ import {
   colorMode,
   colorValue,
 } from './grid.js'
+import { linkUri } from './links.js'
 
 export interface CursorState {
   x: number
@@ -25,6 +26,8 @@ export interface CursorState {
 }
 
 const ESC = '\x1b['
+const OSC = '\x1b]'
+const ST = '\x1b\\'
 // unchanged cells we'd rather rewrite than pay for a cursor jump
 const GAP = 4
 
@@ -86,6 +89,7 @@ export class Renderer {
     let curX = -1
     let curY = -1
     let styleKey = ''
+    let link = 0
 
     const cols = next.cols
     for (let y = 0; y < next.rows; y++) {
@@ -130,6 +134,12 @@ export class Renderer {
             body += sgr(next.fg[i]!, next.bg[i]!, next.at[i]!)
             styleKey = key
           }
+          const lk = next.lk[i]!
+          if (lk !== link) {
+            const uri = lk ? linkUri(lk) : undefined
+            body += uri ? `${OSC}8;id=x${lk};${uri}${ST}` : `${OSC}8;;${ST}`
+            link = uri ? lk : 0
+          }
           const c = next.ch[i]
           body += c === '' || c === undefined || c === '\0' ? ' ' : c
           curX += next.w[i] === 1 ? 2 : 1
@@ -142,6 +152,7 @@ export class Renderer {
       }
     }
 
+    if (link) body += `${OSC}8;;${ST}`
     if (body) body += `${ESC}0m`
 
     // cursor

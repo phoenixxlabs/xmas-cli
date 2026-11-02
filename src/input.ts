@@ -11,6 +11,9 @@ export interface InputHooks {
   topOffset(): number
   // rows the child occupies, mouse events below them are dropped
   childRows(): number
+  // the link under a screen cell (0 based), ctrl+click opens it
+  linkAt?(x: number, y: number): string | null
+  open?(uri: string): void
 }
 
 const PASTE_START = '\x1b[200~'
@@ -36,6 +39,7 @@ export function hotkeyBytes(spec: string): string | null {
 export class InputRouter {
   private pending = ''
   private inPaste = false
+  private swallowRelease = false
   private timer: NodeJS.Timeout | null = null
   private hotkeys = new Map<string, string>()
 
@@ -158,6 +162,20 @@ export class InputRouter {
     }
     const m = MOUSE.exec(seq)
     if (m) {
+      const flags = Number(m[1])
+      const plain = (flags & 3) === 0 && (flags & (32 | 64)) === 0
+      if (m[4] === 'm' && this.swallowRelease) {
+        this.swallowRelease = false
+        return ''
+      }
+      if (plain && flags & 16 && m[4] === 'M') {
+        const uri = this.hooks.linkAt?.(Number(m[2]) - 1, Number(m[3]) - 1)
+        if (uri) {
+          this.swallowRelease = true
+          this.hooks.open?.(uri)
+          return ''
+        }
+      }
       const top = this.hooks.topOffset()
       if (top === 0) return seq
       const y = Number(m[3]) - top
