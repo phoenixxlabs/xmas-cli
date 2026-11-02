@@ -47,6 +47,7 @@ function table(cookiesLeft: number, carrot: boolean): string[] {
 const GIFT = ['.YY.', 'RYYR', 'RYYR', 'RRRR']
 const TABLE_W = 18
 const SANTA_W = 6
+const MARGIN = 3 // cells kept clear to the right of the table
 
 interface Visit {
   age: number
@@ -97,7 +98,7 @@ export class VisitingSanta {
       return
     }
     v.age += Math.min(dt, 0.25)
-    if (v.age > this.duration(v) || !this.roomAt(g, v.y, 0.12)) {
+    if (v.age > this.duration(v) || !this.clear(g, v.y, v.tableX)) {
       this.active = null
       this.nextAt = this.clock + this.gap()
     }
@@ -108,19 +109,32 @@ export class VisitingSanta {
     return v.arrive + COOKIES * EAT_TIME + 0.8 + 2.4 + (v.standX + SANTA_W) / WALK_SPEED + 2
   }
 
-  /** the lowest three rows above the prompt area that are empty right now */
-  private find(g: Grid, scene: Scene): number | null {
+  /**
+   * The lowest rows above the prompt area where Santa's whole walk and the table are clear,
+   * with a few cells to spare. Right-aligned notes such as a usage warning are not in the way
+   * as long as the table stops short of them.
+   */
+  private find(g: Grid, scene: Scene): { y: number; tableX: number } | null {
     const floor = Math.min(scene.noSnowFromRow, g.rows) - 1
-    for (let y = floor - HEIGHT + 1; y >= Math.max(1, floor - 10); y--) if (this.roomAt(g, y, 0.06)) return y
+    const xs: number[] = []
+    for (let x = SANTA_W + 8; x + TABLE_W + MARGIN <= g.cols; x += 3) xs.push(x)
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng() * (i + 1))
+      ;[xs[i], xs[j]] = [xs[j]!, xs[i]!]
+    }
+    for (let y = floor - HEIGHT + 1; y >= Math.max(1, floor - 10); y--) {
+      for (const tableX of xs) if (this.clear(g, y, tableX)) return { y, tableX }
+    }
     return null
   }
 
-  private roomAt(g: Grid, y: number, allowed: number): boolean {
-    let busy = 0
+  /** nothing painted in Santa's rows from the left edge to just past the table */
+  private clear(g: Grid, y: number, tableX: number): boolean {
+    const end = Math.min(g.cols, tableX + TABLE_W + MARGIN)
     for (let r = y; r < y + HEIGHT; r++) {
-      for (let x = 0; x < g.cols; x++) if (!g.isBlank(r * g.cols + x)) busy++
+      for (let x = 0; x < end; x++) if (!g.isBlank(r * g.cols + x)) return false
     }
-    return busy <= g.cols * HEIGHT * allowed
+    return true
   }
 
   private start(g: Grid, scene: Scene): void {
@@ -128,15 +142,14 @@ export class VisitingSanta {
       this.nextAt = this.clock + 60
       return
     }
-    const y = this.find(g, scene)
-    if (y === null) {
+    const spot = this.find(g, scene)
+    if (!spot) {
       this.nextAt = this.clock + 25
       return
     }
-    const tableX = Math.floor(g.cols * (0.45 + this.rng() * 0.3))
-    const standX = Math.min(tableX - SANTA_W - 1, g.cols - TABLE_W - SANTA_W - 2)
+    const standX = spot.tableX - SANTA_W - 1
     const arrive = (standX + SANTA_W) / WALK_SPEED + 0.8
-    this.active = { age: 0, y, tableX: Math.max(SANTA_W + 2, standX + SANTA_W + 1), standX, arrive }
+    this.active = { age: 0, y: spot.y, tableX: spot.tableX, standX, arrive }
   }
 
   draw(g: Grid, scene: Scene): void {

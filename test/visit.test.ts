@@ -42,6 +42,23 @@ describe('visiting santa', () => {
     expect(Math.max(...painted)).toBeLessThan(25)
   })
 
+  it('keeps clear of a note on the right of the bottom row', () => {
+    const { g, scene } = setup()
+    // like a "weekly limit" warning, right-aligned on the row above the prompt box
+    g.text(90, 25, 'w'.repeat(30))
+    const v = new VisitingSanta(cfg)
+    v.trigger()
+    v.update(0.05, g, scene)
+    expect(v.isVisiting).toBe(true)
+    for (let i = 0; i < 20 * 12; i++) v.update(0.05, g, scene)
+    const frame = new Grid(120, 30)
+    frame.copyFrom(g)
+    v.draw(frame, scene)
+    expect(frame.rowText(25, 90, 120)).toBe('w'.repeat(30))
+    // nothing painted by the visit sits within three cells of the note
+    for (let y = 22; y <= 25; y++) expect(frame.rowText(y, 87, 90).trim()).toBe('')
+  })
+
   it('eats the cookies one at a time', () => {
     const { g, scene } = setup()
     const v = new VisitingSanta(cfg)
@@ -54,9 +71,10 @@ describe('visiting santa', () => {
       return n
     }
     v.update(0.05, g, scene)
-    for (let i = 0; i < 20 * 8; i++) v.update(0.05, g, scene)
+    for (let i = 0; i < 20; i++) v.update(0.05, g, scene)
     const early = count()
-    for (let i = 0; i < 20 * 6; i++) v.update(0.05, g, scene)
+    expect(early).toBeGreaterThan(0)
+    for (let i = 0; i < 20 * 24; i++) v.update(0.05, g, scene)
     expect(count()).toBeLessThan(early)
   })
 
