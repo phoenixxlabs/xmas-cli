@@ -38,7 +38,7 @@ export function runHost(opts: HostOptions): Promise<number> {
     const comp = new Compositor(cfg)
     let preset: PresetName = cfg.preset
     comp.onEvent = (m) => log(m)
-    if (opts.sleigh) comp.flyby.trigger()
+    if (opts.sleigh) comp.flyby.trigger(1.5)
 
     let focused = true
     let finished = false

@@ -60,4 +60,24 @@ describe('flyby', () => {
     fly(g, 5, new Flyby({ ...cfg, enabled: false }))
     expect(g.toText().trim()).toBe('')
   })
+
+  it('moves out of the way when text arrives under it', () => {
+    const g = new Grid(120, 30)
+    const scene = emptyScene(g)
+    scene.noSnowFromRow = 26
+    const f = new Flyby(cfg)
+    f.trigger()
+    f.update(0.05, g, scene)
+    expect(f.isFlying).toBe(true)
+    // fill every row the sleigh could be on except the very bottom stretch
+    for (let y = 1; y < 18; y++) g.text(0, y, 'x'.repeat(120))
+    f.update(0.05, g, scene)
+    f.draw(g, scene, 0)
+    for (let y = 1; y < 18; y++) expect(g.rowText(y)).toBe('x'.repeat(120))
+    expect(f.isFlying).toBe(true)
+    // and when there is no room left at all, the flight ends
+    for (let y = 18; y < 26; y++) g.text(0, y, 'x'.repeat(120))
+    f.update(0.05, g, scene)
+    expect(f.isFlying).toBe(false)
+  })
 })

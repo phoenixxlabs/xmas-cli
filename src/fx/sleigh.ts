@@ -136,8 +136,8 @@ export class Flyby {
   }
 
   /** fly as soon as there is room */
-  trigger(): void {
-    this.nextAt = this.clock
+  trigger(delay = 0): void {
+    this.nextAt = this.clock + delay
   }
 
   /** a small chance of a flight when a turn finishes, as long as one hasn't just gone by */
@@ -160,6 +160,16 @@ export class Flyby {
     } else {
       const f = this.active
       f.x += dt * 13
+      // text that arrives under the sleigh pushes it to the next empty stretch, or ends the flight
+      if (!this.rowsFree(g, f.y)) {
+        const y = this.freeRows(g, scene)[0]
+        if (y === undefined) {
+          this.active = null
+          this.nextAt = this.clock + 20
+          return
+        }
+        f.y = y
+      }
       if (this.cfg.items) this.dropItems(dt, f)
       if (f.x > g.cols + 2) {
         this.active = null
@@ -170,7 +180,7 @@ export class Flyby {
     this.fall(dt, g, scene)
   }
 
-  /** looks for a stretch of rows that is empty right now; tries again soon if there is none */
+  /** looks for the highest stretch of rows that is empty right now; tries again soon if there is none */
   private start(g: Grid, scene: Scene): void {
     const deer = Math.max(1, Math.min(3, Math.floor((g.cols - SLEIGH_W) / (DEER_W + GAP + 3))))
     const width = SLEIGH_W + deer * (DEER_W + GAP)
@@ -178,22 +188,30 @@ export class Flyby {
       this.nextAt = this.clock + 30
       return
     }
-    const lowest = scene.noSnowFromRow - HEIGHT
-    const free: number[] = []
-    for (let y = 1; y <= lowest; y++) {
-      let busy = 0
-      for (let r = y; r < y + HEIGHT; r++) {
-        for (let x = 0; x < g.cols; x++) if (!g.isBlank(r * g.cols + x)) busy++
-      }
-      if (busy <= g.cols * HEIGHT * 0.04) free.push(y)
-    }
+    const free = this.freeRows(g, scene)
     if (!free.length) {
       this.nextAt = this.clock + 20
       return
     }
-    const y = free[Math.floor(this.rng() * free.length)]!
+    // fly high: the topmost empty stretch, give or take a row
+    const y = free[Math.floor(this.rng() * Math.min(free.length, 3))]!
     this.active = { x: -width, y, width, deer }
     this.itemTimer = 1
+  }
+
+  private rowsFree(g: Grid, y: number): boolean {
+    let busy = 0
+    for (let r = y; r < y + HEIGHT; r++) {
+      for (let x = 0; x < g.cols; x++) if (!g.isBlank(r * g.cols + x)) busy++
+    }
+    return busy <= g.cols * HEIGHT * 0.04
+  }
+
+  /** every top row where the sleigh would fit over empty space, highest first */
+  private freeRows(g: Grid, scene: Scene): number[] {
+    const free: number[] = []
+    for (let y = 1; y <= scene.noSnowFromRow - HEIGHT; y++) if (this.rowsFree(g, y)) free.push(y)
+    return free
   }
 
   private dropItems(dt: number, f: { x: number; y: number }): void {
