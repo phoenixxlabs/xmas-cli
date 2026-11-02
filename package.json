@@ -11,6 +11,14 @@
     "christmas"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phoenixxlabs/xmas-cli.git"
+  },
+  "homepage": "https://github.com/phoenixxlabs/xmas-cli#readme",
+  "bugs": {
+    "url": "https://github.com/phoenixxlabs/xmas-cli/issues"
+  },
   "type": "module",
   "bin": {
     "xmas": "dist/bin.js"

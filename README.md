@@ -20,7 +20,7 @@ Needs Node 20+ and the CLI you want to wrap. Windows is the tested platform (Con
 portable but unverified elsewhere.
 
 ```
-git clone <this repo> xmas && cd xmas
+git clone https://github.com/phoenixxlabs/xmas-cli.git && cd xmas-cli
 npm install
 npm link
 xmas --xmas-doctor
