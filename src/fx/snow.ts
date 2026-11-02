@@ -23,6 +23,8 @@ interface Flake {
   x: number
   y: number
   cy: number
+  /** the column the flake is shown in; it only changes once x is clearly past the edge */
+  cx: number
   vy: number
   sway: number
   phase: number
@@ -87,10 +89,11 @@ export class Snow {
       x: this.rng() * this.cols,
       y: anywhere ? this.rng() * this.rows : -this.rng() * 3,
       cy: -1,
-      vy: (2 + this.rng() * 2.4) * SPEED[layer]!,
-      sway: 0.5 + this.rng() * 1.4,
+      cx: -1,
+      vy: (2.5 + this.rng() * 0.9) * SPEED[layer]!,
+      sway: 0.1 + this.rng() * 0.3,
       phase: this.rng() * 6.28,
-      freq: 0.6 + this.rng() * 1.2,
+      freq: 0.25 + this.rng() * 0.35,
       layer,
     }
   }
@@ -108,17 +111,23 @@ export class Snow {
     this.gust *= Math.exp(-dt / 1.4)
     this.fill(false)
 
-    const breeze =
-      this.cfg.wind * (Math.sin(this.t * 0.21) * 0.9 + Math.sin(this.t * 0.067 + 1.7) * 0.7) + this.gust * 2.4
+    // a steady drift that only swells and eases, so flakes lean one way instead of swinging about
+    const breeze = this.cfg.wind * (0.5 + 0.25 * Math.sin(this.t * 0.13)) + this.gust * 2.4
     const fall = 1 + this.gust * 0.25
 
     for (let n = 0; n < this.flakes.length; n++) {
       const f = this.flakes[n]!
       const k = SPEED[f.layer]!
       f.y += f.vy * fall * dt
-      f.x += (breeze * k * 1.6 + Math.sin(this.t * f.freq + f.phase) * f.sway) * dt
-      if (f.x < 0) f.x += this.cols
-      else if (f.x >= this.cols) f.x -= this.cols
+      f.x += (breeze * k + Math.sin(this.t * f.freq + f.phase) * f.sway) * dt
+      if (f.x < 0) {
+        f.x += this.cols
+        f.cx = -1
+      } else if (f.x >= this.cols) {
+        f.x -= this.cols
+        f.cx = -1
+      }
+      if (f.cx < 0 || f.x < f.cx - 0.3 || f.x >= f.cx + 1.3) f.cx = Math.floor(f.x)
 
       const cy = Math.floor(f.y)
       if (cy >= this.rows) {
@@ -128,7 +137,7 @@ export class Snow {
       if (cy !== f.cy) {
         f.cy = cy
         if (this.cfg.drift && cy >= 0 && cy + 1 < this.rows) {
-          const cx = Math.floor(f.x)
+          const cx = f.cx
           const here = cy * this.cols + cx
           if (scene.ledge[here + this.cols] && this.clear[here]! >= 1) {
             this.land(here)
@@ -210,14 +219,18 @@ export class Snow {
     }
 
     const glyphs = [this.cfg.glyphs.far, this.cfg.glyphs.mid, this.cfg.glyphs.near]
+    // the small flakes sit high, middle or low in their cell, which triples their vertical resolution
+    const fine = this.cfg.glyphs.far === '·'
     for (const f of this.flakes) {
-      const x = Math.floor(f.x)
+      const x = f.cx
       const y = Math.floor(f.y)
       if (y < 0 || y >= g.rows || x < 0 || x >= cols) continue
       const i = y * cols + x
       if (this.clear[i]! <= this.cfg.clearance) continue
       if (!g.isBlank(i)) continue
-      g.set(x, y, glyphs[f.layer]!, COLORS[f.layer]!)
+      const part = f.y - y
+      const glyph = fine && f.layer === 0 ? (part < 0.34 ? '˙' : part < 0.67 ? '·' : '.') : glyphs[f.layer]!
+      g.set(x, y, glyph, COLORS[f.layer]!)
     }
   }
 }

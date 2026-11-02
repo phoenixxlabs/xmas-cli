@@ -255,7 +255,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
       const g = s.grid()
       let n = 0
       for (let y = 0; y < g.rows; y++)
-        if (FLAKES.test(g.rowText(y).replace(/[·]/g, '').replace(/Try.*/, ''))) n++
+        if (FLAKES.test(g.rowText(y).replace(/[·˙.]/g, '').replace(/Try.*/, ''))) n++
       return n > 0
     }, 'some snow')
     for (let k = 0; k < 20; k++) {
@@ -270,7 +270,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
       const text = 'The quick brown fox jumps over the lazy dog. 好 世界 ✻ é'
       const row = lines.find((l) => l.startsWith('The quick brown'))!
       expect(row.startsWith(text)).toBe(true)
-      expect(row.slice(text.length)).toMatch(/^[ ·*❄]*$/) // only flakes may share the row, in the margin
+      expect(row.slice(text.length)).toMatch(/^[ ·˙.*❄]*$/) // only flakes may share the row, in the margin
     }
   })
 
