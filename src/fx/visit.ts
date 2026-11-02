@@ -47,6 +47,7 @@ function table(cookiesLeft: number, carrot: boolean): string[] {
 const GIFT = ['.YY.', 'RYYR', 'RYYR', 'RRRR']
 const TABLE_W = 18
 const SANTA_W = 6
+const LIFT = 3 // rows left between Santa's boots and the bottom of the screen area
 const MARGIN = 3 // cells kept clear to the right of the table
 
 interface Visit {
@@ -122,7 +123,8 @@ export class VisitingSanta {
       const j = Math.floor(this.rng() * (i + 1))
       ;[xs[i], xs[j]] = [xs[j]!, xs[i]!]
     }
-    for (let y = floor - HEIGHT + 1; y >= Math.max(1, floor - 10); y--) {
+    // stand a few rows up, clear of the notes and prompt box that hug the bottom
+    for (let y = floor - HEIGHT + 1 - LIFT; y >= Math.max(1, floor - 12); y--) {
       for (const tableX of xs) if (this.clear(g, y, tableX)) return { y, tableX }
     }
     return null
