@@ -13,6 +13,10 @@ export interface LightsConfig {
 const WIRE = hex('#3b5875')
 const BULBS = [hex('#ff4d5e'), hex('#46d68c'), hex('#ffd166'), hex('#6cc4ff')]
 
+// Bulb brightness moves in a few steps, a few times a second. Smooth fading would recolour every
+// bulb on every frame, and that stream of colour changes is what slows a terminal down.
+const steps = (v: number, n: number): number => Math.round(v * n) / n
+
 export function drawLights(g: Grid, scene: Scene, t: number, working: boolean, cfg: LightsConfig): void {
   if (!cfg.enabled) return
   const sp = Math.max(3, Math.floor(cfg.spacing))
@@ -28,8 +32,8 @@ export function drawLights(g: Grid, scene: Scene, t: number, working: boolean, c
       }
       const n = Math.floor(rel / sp)
       const level = working
-        ? Math.pow(Math.max(0, Math.sin(x * 0.42 - t * 7)), 2)
-        : 0.5 + 0.5 * Math.sin(t * 1.5 + n * 2.3 + r.y * 0.7)
+        ? steps(Math.pow(Math.max(0, Math.sin(x * 0.42 - (Math.floor(t * 12) / 12) * 7)), 2), 3)
+        : steps(0.5 + 0.5 * Math.sin((Math.floor(t * 4) / 4) * 1.5 + n * 2.3 + r.y * 0.7), 4)
       const color: Color = mix(WIRE, BULBS[n % BULBS.length]!, 0.45 + 0.55 * level)
       g.ch[i] = '━'
       g.fg[i] = color

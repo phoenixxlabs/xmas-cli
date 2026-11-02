@@ -47,7 +47,7 @@ export const DEFAULTS: Config = {
     wind: 1,
     clearance: 2,
     drift: true,
-    glyphs: { far: '·', mid: '*', near: '❄' },
+    glyphs: { far: '·', mid: '*', near: '✶' },
   },
   lights: { enabled: true, spacing: 7 },
   logo: { enabled: true },

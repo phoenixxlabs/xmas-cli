@@ -52,6 +52,9 @@ export function runHost(opts: HostOptions): Promise<number> {
     let frames = 0
     let frameMs = 0
     let bytesOut = 0
+    let writes = 0
+    let writeLagMs = 0
+    let writeLagMax = 0
     let cpuMark = process.cpuUsage()
     let wallMark = Date.now()
 
@@ -162,8 +165,13 @@ export function runHost(opts: HostOptions): Promise<number> {
         if (bytes) {
           bytesOut += bytes.length
           busy = true
+          const sentAt = Date.now()
           term.write(bytes, () => {
             busy = false
+            const lag = Date.now() - sentAt
+            writeLagMs += lag
+            writeLagMax = Math.max(writeLagMax, lag)
+            writes++
             if (again) {
               again = false
               request()
@@ -198,7 +206,8 @@ export function runHost(opts: HostOptions): Promise<number> {
         if (safe) return
         if (comp.isAnimated || comp.toast.active(now)) request()
       },
-      Math.round(1000 / cfg.fps),
+      // Windows timers tick every ~15.6ms, so ask for a little less than the frame time or 60 fps becomes 32
+      Math.max(1, Math.floor(1000 / cfg.fps) - 2),
     )
 
     // a line every 10s (only when logging) so slowdowns are visible without a profiler
@@ -206,11 +215,14 @@ export function runHost(opts: HostOptions): Promise<number> {
       const wall = Date.now() - wallMark
       const cpu = process.cpuUsage(cpuMark)
       log(
-        `perf: ${frames} frames, avg ${(frameMs / Math.max(1, frames)).toFixed(2)}ms, ${(bytesOut / 1024).toFixed(0)}KB out, cpu ${(((cpu.user + cpu.system) / 1000 / wall) * 100).toFixed(1)}%`,
+        `perf: ${frames} frames, avg ${(frameMs / Math.max(1, frames)).toFixed(2)}ms, ${(bytesOut / 1024).toFixed(0)}KB out, ${writes} writes (lag avg ${(writeLagMs / Math.max(1, writes)).toFixed(1)}ms, max ${writeLagMax}ms), cpu ${(((cpu.user + cpu.system) / 1000 / wall) * 100).toFixed(1)}%`,
       )
       frames = 0
       frameMs = 0
       bytesOut = 0
+      writes = 0
+      writeLagMs = 0
+      writeLagMax = 0
       cpuMark = process.cpuUsage()
       wallMark = Date.now()
     }, 10_000)

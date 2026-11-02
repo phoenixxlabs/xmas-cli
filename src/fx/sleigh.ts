@@ -1,6 +1,9 @@
 // Every few minutes a sleigh and its reindeer cross the screen through whatever empty rows
 // there are, trailing sparkles and dropping the odd gift, carrot and cookie. Everything is
 // drawn into blank cells only, so a flight can never cover text.
+//
+// The art is drawn as pixels, two to a cell: a half block shows the top pixel as its
+// foreground and the bottom pixel as its background.
 
 import { A_BOLD, Color, Grid, hex, mix } from '../grid.js'
 import type { Scene } from '../scene.js'
@@ -15,44 +18,52 @@ export interface FlybyConfig {
   items: boolean
 }
 
-const INK: Record<string, Color> = {
-  b: hex('#b07a4c'), // reindeer coat
-  d: hex('#7a5233'), // antlers, legs
-  n: hex('#ff3b4d'), // the red nose
-  r: hex('#e0384c'), // sleigh and hat
-  R: hex('#b82a3c'), // sleigh shadow
-  t: hex('#d9b98a'), // sack
-  g: hex('#f2c14e'), // runners, reins
-  w: hex('#f4f8ff'), // trim and beard
-  k: hex('#f3c9a5'), // face
+const PIXEL: Record<string, Color> = {
+  R: hex('#e8404f'), // coat, hat, sleigh
+  r: hex('#a52a3a'), // sleigh shadow
+  W: hex('#f6f9ff'), // fur, beard
+  S: hex('#f3c9a5'), // face
+  K: hex('#23232e'), // eyes
+  Y: hex('#f2c14e'), // runners, reins, belt
+  T: hex('#d9b98a'), // sack
+  B: hex('#b07a4c'), // reindeer coat
+  b: hex('#6e4a2e'), // antlers, legs
+  N: hex('#ff3b4d'), // the red nose
 }
 
-// each sprite row is [art, ink]; ink is padded with its last letter, a space means "no paint"
-type Row = [string, string]
+// Santa is 8 pixels wide and sits on top of the sleigh, which starts at pixel row 8.
+const SANTA = ['..RRRW..', '.RRRRRR.', '.WWWWWW.', '.SSSSSS.', '.SKSSKS.', '.WWWWWW.', '.WWWWWW.', 'RRRWWRRR']
 
-const SLEIGH: Row[] = [
-  ['    ▗▟▙▖  ▗▄▖', '    rrrr  ttt'], // hat, sack
-  ['   ▐▛▀▀▜▌▐██▌', '   wwkkwwtttt'], // face between the beard
-  [' ▟▇▇▇▇▇▇▇▇▇▙ ', ' rrrwwwwrrrrr '],
-  [' ▜█████████▛ ', 'R'],
-  ['▀▀▀▀▀▀▀▀▀▀▀▀▀', 'g'],
+const SACK = ['.YY.', 'TTTT', 'TTTT', 'TTTT', 'TTTT']
+
+const SLEIGH = [
+  '.RRRRRRRRRRRRRRRR.',
+  'RRRRRRRRRRRRRRRRRR',
+  'rrrrrrrrrrrrrrrrrr',
+  '..YYYYYYYYYYYYYY..',
+  '...Y......Y.....YY',
+  'YYYYYYYYYYYYYYYYYY',
 ]
 
-const REINS = 'g'
-
-/** one reindeer, 11 wide and 3 tall; `step` picks one of two leg positions */
-function deer(step: number, lead: boolean): Row[] {
+/** one reindeer facing right, 14 wide and 6 tall; `step` picks one of two leg positions */
+function deer(step: number, lead: boolean): string[] {
+  const legs = step ? '..b.b..b..b...' : '.b..b...b.b...'
   return [
-    ['        ╲╿╱', 'd'],
-    [' ▗█████▙▟▌•', `bbbbbbbbbb${lead ? 'n' : 'd'}`],
-    [step ? '  ▐▌ ▐▌    ' : ' ▐▌   ▐▌   ', 'd'],
+    '..........b..b',
+    '...........bb.',
+    '.BBBBBBB..BBB.',
+    `BBBBBBBBBBBBB${lead ? 'N' : 'b'}`,
+    '.BBBBBBBB.BBB.',
+    legs,
   ]
 }
 
-const GAP = 1 // cells of rein between neighbours
-const DEER_W = 11
-const SLEIGH_W = 13
-const HEIGHT = 5
+const GAP = 2 // pixels of rein between neighbours
+const DEER_W = 14
+const SLEIGH_W = 18
+const ROWS = 14 // pixel rows; the terminal rows are half of this
+const HEIGHT = ROWS / 2
+const REIN_ROW = 11
 
 interface Item {
   x: number
@@ -75,6 +86,27 @@ const SPARKS = ['·', '.', '*']
 const SPARK_COLOR = hex('#bfe3ff')
 const SPARK_FADE = hex('#2c4058')
 
+/** the whole team as a grid of pixel letters ('.' is empty) */
+function train(deerCount: number, step: number): string[] {
+  const width = SLEIGH_W + deerCount * (DEER_W + GAP)
+  const px = Array.from({ length: ROWS }, () => Array<string>(width).fill('.'))
+  const stamp = (art: string[], x0: number, y0: number): void => {
+    art.forEach((line, y) => {
+      for (let x = 0; x < line.length; x++) if (line[x] !== '.') px[y0 + y]![x0 + x] = line[x]!
+    })
+  }
+  stamp(SANTA, 5, 0)
+  stamp(SACK, 14, 3)
+  stamp(SLEIGH, 0, 8)
+  let x = SLEIGH_W
+  for (let n = 0; n < deerCount; n++) {
+    for (let i = 0; i < GAP; i++) px[REIN_ROW]![x + i] = 'Y'
+    stamp(deer(step, n === deerCount - 1), x + GAP, 8)
+    x += DEER_W + GAP
+  }
+  return px.map((row) => row.join(''))
+}
+
 export class Flyby {
   private rng = mulberry32(2025)
   private clock = 0
@@ -83,7 +115,7 @@ export class Flyby {
   private active: { x: number; y: number; width: number; deer: number } | null = null
   private items: Item[] = []
   private itemTimer = 0
-  private cols = 0
+  private cache = new Map<string, string[]>()
 
   constructor(public cfg: FlybyConfig) {
     this.nextAt = this.gap()
@@ -98,8 +130,7 @@ export class Flyby {
     return minGap + this.rng() * Math.max(0, maxGap - minGap)
   }
 
-  resize(cols: number): void {
-    this.cols = cols
+  resize(_cols: number): void {
     this.active = null
     this.items = []
   }
@@ -123,7 +154,6 @@ export class Flyby {
     }
     dt = Math.min(dt, 0.25)
     this.clock += dt
-    this.cols = g.cols
 
     if (!this.active) {
       if (this.clock >= this.nextAt) this.start(g, scene)
@@ -172,7 +202,7 @@ export class Flyby {
     this.itemTimer = 0.9 + this.rng() * 1.2
     const [ch, color] = ITEMS[Math.floor(this.rng() * ITEMS.length)]!
     this.items.push({
-      x: f.x + 4 + this.rng() * 6,
+      x: f.x + 6 + this.rng() * 8,
       y: f.y + HEIGHT,
       vx: -2.5 - this.rng() * 2,
       vy: 3 + this.rng() * 1.5,
@@ -194,33 +224,31 @@ export class Flyby {
     })
   }
 
+  private frame(deerCount: number, step: number): string[] {
+    const key = `${deerCount}:${step}`
+    let art = this.cache.get(key)
+    if (!art) this.cache.set(key, (art = train(deerCount, step)))
+    return art
+  }
+
   draw(g: Grid, scene: Scene, t: number): void {
     if (!this.cfg.enabled) return
     const f = this.active
     const floor = scene.noSnowFromRow - 1
 
-    const put = (x: number, y: number, ch: string, color: Color, at = 0): void => {
+    const put = (x: number, y: number, ch: string, fg: Color, bg = 0, at = 0): void => {
       if (x < 0 || x >= g.cols || y < 0 || y > floor) return
       const i = y * g.cols + x
       if (g.isBlank(i)) {
         g.ch[i] = ch
-        g.fg[i] = color
+        g.fg[i] = fg
+        g.bg[i] = bg
         g.at[i] = at
       }
     }
 
     if (f) {
       const x0 = Math.round(f.x)
-      const step = Math.floor(t * 5.5) % 2
-      const sprite = (rows: Row[], dx: number, dy: number): void => {
-        rows.forEach(([art, ink], r) => {
-          for (let c = 0; c < art.length; c++) {
-            if (art[c] === ' ') continue
-            const key = ink[Math.min(c, ink.length - 1)]!
-            put(x0 + dx + c, f.y + dy + r, art[c]!, key === ' ' ? 0 : INK[key]!)
-          }
-        })
-      }
 
       // the sparkle trail first, so the sprites win any shared cell
       for (let d = 1; d <= 16; d++) {
@@ -239,15 +267,21 @@ export class Flyby {
         }
       }
 
-      sprite(SLEIGH, 0, 0)
-      let dx = SLEIGH_W
-      for (let n = 0; n < f.deer; n++) {
-        put(x0 + dx - 1, f.y + 3, '─', INK[REINS]!)
-        sprite(deer(step, n === f.deer - 1), dx, 2)
-        dx += DEER_W + GAP
+      const art = this.frame(f.deer, Math.floor(t * 5.5) % 2)
+      for (let cy = 0; cy < HEIGHT; cy++) {
+        const top = art[cy * 2]!
+        const bottom = art[cy * 2 + 1]!
+        for (let x = 0; x < top.length; x++) {
+          const a = top[x] === '.' ? 0 : PIXEL[top[x]!]!
+          const b = bottom[x] === '.' ? 0 : PIXEL[bottom[x]!]!
+          if (!a && !b) continue
+          if (a && b) put(x0 + x, f.y + cy, a === b ? '█' : '▀', a, a === b ? 0 : b)
+          else if (a) put(x0 + x, f.y + cy, '▀', a)
+          else put(x0 + x, f.y + cy, '▄', b)
+        }
       }
     }
 
-    for (const it of this.items) put(Math.round(it.x), Math.floor(it.y), it.ch, it.color, A_BOLD)
+    for (const it of this.items) put(Math.round(it.x), Math.floor(it.y), it.ch, it.color, 0, A_BOLD)
   }
 }
