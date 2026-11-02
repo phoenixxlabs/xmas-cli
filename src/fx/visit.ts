@@ -1,6 +1,7 @@
-// Now and then a small Santa walks in along the bottom of the screen, finds a plate of cookies
-// and a carrot left out for the reindeer, eats the cookies, takes the carrot, says a ho ho ho,
-// leaves a present and walks off again. Like the sleigh it only paints blank cells.
+// Now and then a small Santa walks in along the bottom of the screen to one treat left out for
+// him (cookies, a glass of milk, a carrot for the reindeer or hot cocoa), finishes it, says
+// thanks, leaves a present and walks off again. One treat per visit keeps the screen clear. Like
+// the sleigh it only paints blank cells.
 
 import { A_BOLD, Grid, hex } from '../grid.js'
 import type { Scene } from '../scene.js'
@@ -16,9 +17,7 @@ export interface VisitConfig {
 
 const HEIGHT = 3 // terminal rows, six pixels
 const WALK_SPEED = 12 // columns per second
-const COOKIES = 3
 const EAT_TIME = 1.2
-const SAY = 'Ho ho ho!'
 const SAY_COLOR = hex('#f6f9ff')
 
 // Santa faces right; `flip` mirrors him to walk the other way
@@ -30,28 +29,79 @@ function santa(frame: 'walk' | 'step' | 'eat' | 'chew', flip: boolean): string[]
   return flip ? art.map((row) => [...row].reverse().join('')) : art
 }
 
-/** the plate, a glass of milk and the reindeer's carrot, 18 wide and 4 tall */
-function table(cookiesLeft: number, carrot: boolean): string[] {
-  const cookie = (n: number): [string, string] => (n < cookiesLeft ? ['TK', 'TT'] : ['..', '..'])
-  const [a0, a1] = cookie(0)
-  const [b0, b1] = cookie(1)
-  const [c0, c1] = cookie(2)
-  return [
-    `${a0}.${b0}.${c0}..WW......`.padEnd(18, '.'),
-    `${a1}.${b1}.${c1}..WW......`.padEnd(18, '.'),
-    `WWWWWWWWW.WW.${carrot ? 'GOOO' : '....'}.`.padEnd(18, '.'),
-    `.WWWWWWW..WW..${carrot ? 'OO' : '..'}..`.padEnd(18, '.'),
-  ]
+export interface Treat {
+  name: string
+  /** columns wide */
+  width: number
+  /** how many bites, sips or nibbles it takes */
+  steps: number
+  say: string
+  /** the treat with `left` of its steps still to go, four pixel rows tall */
+  art(left: number): string[]
 }
 
+export const TREATS: Treat[] = [
+  {
+    name: 'cookies',
+    width: 9,
+    steps: 3,
+    say: 'Mmm, cookies!',
+    art: (left) => {
+      const cookie = (n: number): [string, string] => (n < left ? ['TK', 'TT'] : ['..', '..'])
+      const [a0, a1] = cookie(0)
+      const [b0, b1] = cookie(1)
+      const [c0, c1] = cookie(2)
+      return [`${a0}.${b0}.${c0}.`, `${a1}.${b1}.${c1}.`, 'WWWWWWWWW', '.WWWWWWW.']
+    },
+  },
+  {
+    name: 'milk',
+    width: 5,
+    steps: 3,
+    say: 'Ahh, milk!',
+    art: (left) => {
+      const row = (level: number): string => (left >= level ? 'gWWWg' : 'g...g')
+      return ['g...g', row(3), row(2), left >= 1 ? '.WWW.' : '.ggg.']
+    },
+  },
+  {
+    name: 'carrot',
+    width: 7,
+    steps: 2,
+    say: 'For Rudolph!',
+    art: (left) => {
+      const len = left * 3
+      return [
+        '.......',
+        '.......',
+        left ? `G${'O'.repeat(len)}`.padEnd(7, '.') : '.......',
+        left ? `.${'O'.repeat(Math.max(0, len - 2))}`.padEnd(7, '.') : '.......',
+      ]
+    },
+  },
+  {
+    name: 'cocoa',
+    width: 6,
+    steps: 3,
+    say: 'Ahh, cocoa!',
+    art: (left) => [
+      left ? '.W..W.' : '......',
+      left >= 2 ? 'WbbbWW' : 'W...WW',
+      left >= 1 ? 'WbbbW.' : 'W...W.',
+      '.WWW..',
+    ],
+  },
+]
+
 const GIFT = ['.YY.', 'RYYR', 'RYYR', 'RRRR']
-const TABLE_W = 18
+const GIFT_W = 4
 const SANTA_W = 6
 const LIFT = 3 // rows left between Santa's boots and the bottom of the screen area
 const MARGIN = 3 // cells kept clear to the right of the table
 
 interface Visit {
   age: number
+  treat: Treat
   /** top row of the scene; Santa's feet are at the bottom of it */
   y: number
   tableX: number
@@ -64,6 +114,7 @@ export class VisitingSanta {
   private clock = 0
   private nextAt: number
   private active: Visit | null = null
+  private last = -1
 
   constructor(public cfg: VisitConfig) {
     this.nextAt = this.gap()
@@ -99,7 +150,7 @@ export class VisitingSanta {
       return
     }
     v.age += Math.min(dt, 0.25)
-    if (v.age > this.duration(v) || !this.clear(g, v.y, v.tableX)) {
+    if (v.age > this.duration(v) || !this.clear(g, v.y, v.tableX, v.treat)) {
       this.active = null
       this.nextAt = this.clock + this.gap()
     }
@@ -107,7 +158,7 @@ export class VisitingSanta {
 
   // arrival, three cookies, the carrot, the speech, then the walk back out of the left edge
   private duration(v: Visit): number {
-    return v.arrive + COOKIES * EAT_TIME + 0.8 + 2.4 + (v.standX + SANTA_W) / WALK_SPEED + 2
+    return v.arrive + v.treat.steps * EAT_TIME + 0.8 + 2.4 + (v.standX + SANTA_W) / WALK_SPEED + 2
   }
 
   /**
@@ -115,24 +166,24 @@ export class VisitingSanta {
    * with a few cells to spare. Right-aligned notes such as a usage warning are not in the way
    * as long as the table stops short of them.
    */
-  private find(g: Grid, scene: Scene): { y: number; tableX: number } | null {
+  private find(g: Grid, scene: Scene, treat: Treat): { y: number; tableX: number } | null {
     const floor = Math.min(scene.noSnowFromRow, g.rows) - 1
     const xs: number[] = []
-    for (let x = SANTA_W + 8; x + TABLE_W + MARGIN <= g.cols; x += 3) xs.push(x)
+    for (let x = SANTA_W + 8; x + treat.width + GIFT_W + 1 + MARGIN <= g.cols; x += 3) xs.push(x)
     for (let i = xs.length - 1; i > 0; i--) {
       const j = Math.floor(this.rng() * (i + 1))
       ;[xs[i], xs[j]] = [xs[j]!, xs[i]!]
     }
     // stand a few rows up, clear of the notes and prompt box that hug the bottom
     for (let y = floor - HEIGHT + 1 - LIFT; y >= Math.max(1, floor - 12); y--) {
-      for (const tableX of xs) if (this.clear(g, y, tableX)) return { y, tableX }
+      for (const tableX of xs) if (this.clear(g, y, tableX, treat)) return { y, tableX }
     }
     return null
   }
 
   /** nothing painted in Santa's rows from the left edge to just past the table */
-  private clear(g: Grid, y: number, tableX: number): boolean {
-    const end = Math.min(g.cols, tableX + TABLE_W + MARGIN)
+  private clear(g: Grid, y: number, tableX: number, treat: Treat): boolean {
+    const end = Math.min(g.cols, tableX + treat.width + GIFT_W + 1 + MARGIN)
     for (let r = y; r < y + HEIGHT; r++) {
       for (let x = 0; x < end; x++) if (!g.isBlank(r * g.cols + x)) return false
     }
@@ -144,14 +195,19 @@ export class VisitingSanta {
       this.nextAt = this.clock + 60
       return
     }
-    const spot = this.find(g, scene)
+    // a different treat each time
+    let pick = Math.floor(this.rng() * TREATS.length)
+    if (pick === this.last) pick = (pick + 1) % TREATS.length
+    const treat = TREATS[pick]!
+    const spot = this.find(g, scene, treat)
     if (!spot) {
       this.nextAt = this.clock + 25
       return
     }
     const standX = spot.tableX - SANTA_W - 1
     const arrive = (standX + SANTA_W) / WALK_SPEED + 0.8
-    this.active = { age: 0, y: spot.y, tableX: spot.tableX, standX, arrive }
+    this.last = pick
+    this.active = { age: 0, treat, y: spot.y, tableX: spot.tableX, standX, arrive }
   }
 
   draw(g: Grid, scene: Scene): void {
@@ -159,19 +215,19 @@ export class VisitingSanta {
     if (!this.cfg.enabled || !v) return
     const floor = Math.min(scene.noSnowFromRow, g.rows) - 1
 
+    const { treat } = v
     const eatStart = v.arrive
-    const eaten = Math.min(COOKIES, Math.max(0, Math.floor((v.age - eatStart) / EAT_TIME)))
-    const doneEating = eatStart + COOKIES * EAT_TIME
-    const carrot = v.age < doneEating + 0.8
-    const speakFrom = doneEating + 0.8
+    const doneEating = eatStart + treat.steps * EAT_TIME
+    const eaten = Math.min(treat.steps, Math.max(0, Math.floor((v.age - eatStart) / EAT_TIME)))
+    const speakFrom = doneEating + 0.4
     const leaveAt = speakFrom + 2.4
     const speaking = v.age >= speakFrom && v.age < leaveAt
     const leaving = v.age >= leaveAt
 
-    // the table and, once he has eaten, the thank-you present
+    // the treat and, once it is gone, the thank-you present
     if (v.age > 0.4) {
-      paintPixels(g, table(COOKIES - eaten, carrot), v.tableX, v.y, floor)
-      if (v.age >= speakFrom) paintPixels(g, GIFT, v.tableX + 12, v.y, floor)
+      paintPixels(g, treat.art(treat.steps - eaten), v.tableX, v.y, floor)
+      if (v.age >= speakFrom) paintPixels(g, GIFT, v.tableX + treat.width + 1, v.y, floor)
     }
 
     // Santa: in from the left, eating, then back out the way he came
@@ -193,13 +249,14 @@ export class VisitingSanta {
     paintPixels(g, santa(frame, leaving), x, v.y, floor)
 
     if (speaking) {
-      const at = Math.max(0, Math.min(g.cols - SAY.length, x - 1))
+      const say = treat.say
+      const at = Math.max(0, Math.min(g.cols - say.length, x - 1))
       const y = v.y - 1
       if (y >= 0) {
-        for (let i = 0; i < SAY.length; i++) {
+        for (let i = 0; i < say.length; i++) {
           const k = y * g.cols + at + i
           if (g.isBlank(k)) {
-            g.ch[k] = SAY[i]!
+            g.ch[k] = say[i]!
             g.fg[k] = SAY_COLOR
             g.at[k] = A_BOLD
           }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Grid, hex } from '../src/grid.js'
-import { VisitingSanta } from '../src/fx/visit.js'
+import { TREATS, VisitingSanta } from '../src/fx/visit.js'
 import { emptyScene } from '../src/scene.js'
 
 const cfg = { enabled: true, minGap: 10, maxGap: 10 }
@@ -59,23 +59,36 @@ describe('visiting santa', () => {
     for (let y = 22; y <= 25; y++) expect(frame.rowText(y, 87, 90).trim()).toBe('')
   })
 
-  it('eats the cookies one at a time', () => {
+  it('has a few different treats and each one gets used up', () => {
+    expect(TREATS.length).toBeGreaterThanOrEqual(4)
+    const lit = (rows: string[]): number => rows.join('').replace(/\./g, '').length
+    for (const t of TREATS) {
+      const full = t.art(t.steps)
+      expect(full.length).toBe(4)
+      for (const row of full) expect(row.length).toBe(t.width)
+      let before = lit(full)
+      for (let left = t.steps - 1; left >= 0; left--) {
+        const now = lit(t.art(left))
+        expect(now).toBeLessThanOrEqual(before)
+        before = now
+      }
+      expect(lit(t.art(0))).toBeLessThan(lit(full))
+    }
+  })
+
+  it('brings one treat per visit and not the same one twice running', () => {
     const { g, scene } = setup()
     const v = new VisitingSanta(cfg)
-    v.trigger()
-    const count = (): number => {
-      const frame = new Grid(120, 30)
-      v.draw(frame, scene)
-      let n = 0
-      for (let i = 0; i < frame.ch.length; i++) if (frame.fg[i] === hex('#d9b98a') && frame.ch[i] === '█') n++
-      return n
+    const seen: string[] = []
+    for (let n = 0; n < 6; n++) {
+      v.trigger()
+      v.update(0.05, g, scene)
+      expect(v.isVisiting).toBe(true)
+      seen.push((v as unknown as { active: { treat: { name: string } } }).active.treat.name)
+      for (let i = 0; i < 20 * 60 && v.isVisiting; i++) v.update(0.05, g, scene)
     }
-    v.update(0.05, g, scene)
-    for (let i = 0; i < 20; i++) v.update(0.05, g, scene)
-    const early = count()
-    expect(early).toBeGreaterThan(0)
-    for (let i = 0; i < 20 * 24; i++) v.update(0.05, g, scene)
-    expect(count()).toBeLessThan(early)
+    for (let i = 1; i < seen.length; i++) expect(seen[i]).not.toBe(seen[i - 1])
+    expect(new Set(seen).size).toBeGreaterThan(1)
   })
 
   it('does nothing when disabled', () => {

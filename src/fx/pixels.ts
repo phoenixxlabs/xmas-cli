@@ -12,10 +12,11 @@ export const PIXEL: Record<string, Color> = {
   Y: hex('#f2c14e'), // runners, reins, belt
   T: hex('#d9b98a'), // sack, cookies
   B: hex('#b07a4c'), // reindeer coat
-  b: hex('#6e4a2e'), // antlers, legs
+  b: hex('#6e4a2e'), // antlers, legs, cocoa
   N: hex('#ff3b4d'), // the red nose
   O: hex('#ff9f43'), // carrot
   G: hex('#5fcf80'), // carrot top
+  g: hex('#8fb8d8'), // glass
 }
 
 /**

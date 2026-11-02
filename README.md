@@ -58,7 +58,7 @@ directly with no wrapper. When a session ends, xmas prints its id and the comman
 - **Mascot** gets a red coat and a Santa hat.
 - **Words**: spinner verbs, tips and the finished-turn line are swapped for winter ones.
 - **Sleigh**: every few minutes (and sometimes when a turn finishes) a sleigh and reindeer fly through the highest empty rows, dropping presents. They only use blank cells, so they never cover text. Off in the `--calm` look.
-- **Visitor**: now and then a small Santa walks along the bottom, eats the cookies left out for him, takes the reindeer's carrot, says ho ho ho and leaves a present. `xmas --santa` calls him now.
+- **Visitor**: now and then a small Santa walks along the bottom to one treat left out for him (cookies, milk, hot cocoa or the reindeer's carrot), finishes it, says thanks and leaves a present. It is a different treat each visit, so the screen never fills up. `xmas --santa` calls him now.
 - **Codex logo**: Codex wipes its startup logo after a couple of seconds; xmas keeps a dim copy behind everything, so snow and the sleigh pass in front of it. Turn it off with `"codex": { "logo": false }`.
 - **Band** (the `--max` look): a greeting and countdown across the top row.
 
