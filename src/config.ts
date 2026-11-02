@@ -1,0 +1,164 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import type { SnowConfig } from './fx/snow.js'
+import type { LightsConfig } from './fx/lights.js'
+import type { LogoConfig } from './fx/logo.js'
+import type { BandConfig } from './fx/frame.js'
+import type { WordsConfig } from './fx/words.js'
+
+export type PresetName = 'calm' | 'festive' | 'max'
+export const PRESET_ORDER: PresetName[] = ['calm', 'festive', 'max']
+
+export interface Config {
+  preset: PresetName
+  fps: number
+  snow: SnowConfig
+  lights: LightsConfig
+  logo: LogoConfig
+  band: BandConfig
+  words: WordsConfig
+  /** a gust of snow when a turn finishes */
+  burst: boolean
+  toast: boolean
+  titlePrefix: string
+  /** which CLI `xmas` wraps when neither --claude nor --codex is given */
+  agent: 'claude' | 'codex'
+  /** skip permission prompts (claude --dangerously-skip-permissions / codex bypass) */
+  yolo: boolean
+  codex: { bin: string | null }
+  claude: {
+    bin: string | null
+    injectSettings: boolean
+    /** merged over the winter defaults in the injected --settings file */
+    settings: Record<string, unknown>
+  }
+  hotkeys: { snow: string; lights: string; preset: string }
+}
+
+export const DEFAULTS: Config = {
+  preset: 'festive',
+  fps: 24,
+  snow: {
+    enabled: true,
+    density: 0.011,
+    wind: 1,
+    clearance: 2,
+    drift: true,
+    glyphs: { far: '·', mid: '*', near: '❄' },
+  },
+  lights: { enabled: true, spacing: 7 },
+  logo: { enabled: true },
+  band: { enabled: false, text: 'Merry Christmas · {countdown}' },
+  words: { enabled: true },
+  burst: true,
+  toast: true,
+  titlePrefix: '❄ ',
+  agent: 'claude',
+  yolo: true,
+  codex: { bin: null },
+  claude: { bin: null, injectSettings: true, settings: {} },
+  hotkeys: { snow: 'ctrl+alt+s', lights: 'ctrl+alt+l', preset: 'ctrl+alt+p' },
+}
+
+type Deep<T> = { [K in keyof T]?: T[K] extends object ? Deep<T[K]> : T[K] }
+
+export const PRESETS: Record<PresetName, Deep<Config>> = {
+  calm: {
+    fps: 12,
+    snow: { density: 0.006, wind: 0.4, drift: false },
+    lights: { spacing: 9 },
+    burst: false,
+  },
+  festive: {},
+  max: {
+    fps: 30,
+    snow: { density: 0.022, wind: 1.5 },
+    band: { enabled: true },
+  },
+}
+
+export function configDir(): string {
+  return process.env.XMAS_HOME || path.join(os.homedir(), '.xmas')
+}
+
+export function configPath(): string {
+  return path.join(configDir(), 'config.json')
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** copy values from `src` onto a clone of `base`, keeping only keys/types `base` knows */
+export function overlay<T>(base: T, src: unknown, warn: (m: string) => void, where = ''): T {
+  if (!isObj(base) || !isObj(src)) return base
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) }
+  for (const [k, v] of Object.entries(src)) {
+    if (!(k in out)) {
+      warn(`unknown option ${where}${k}`)
+      continue
+    }
+    const cur = out[k]
+    if (k === 'settings' && isObj(v))
+      out[k] = v // free-form passthrough
+    else if (isObj(cur) && isObj(v)) out[k] = overlay(cur, v, warn, `${where}${k}.`)
+    else if (cur === null ? typeof v === 'string' || v === null : typeof v === typeof cur) out[k] = v
+    else warn(`option ${where}${k} should be ${cur === null ? 'string|null' : typeof cur}`)
+  }
+  return out as T
+}
+
+export function resolveConfig(
+  file: unknown,
+  opts: { preset?: PresetName; warn?: (m: string) => void } = {},
+): Config {
+  const warn = opts.warn ?? (() => {})
+  const filePreset = isObj(file) && typeof file.preset === 'string' ? file.preset : undefined
+  const name = (opts.preset ??
+    (PRESET_ORDER.includes(filePreset as PresetName) ? (filePreset as PresetName) : undefined) ??
+    DEFAULTS.preset) as PresetName
+  let cfg = overlay(DEFAULTS, PRESETS[name], warn)
+  const rest = isObj(file) ? { ...file } : {}
+  delete rest.preset
+  cfg = overlay(cfg, rest, warn)
+  cfg.preset = name
+  if (cfg.agent !== 'claude' && cfg.agent !== 'codex') cfg.agent = 'claude'
+  cfg.fps = Math.max(1, Math.min(60, Math.round(cfg.fps)))
+  cfg.snow.density = Math.max(0, Math.min(0.1, cfg.snow.density))
+  cfg.snow.clearance = Math.max(0, Math.min(6, Math.round(cfg.snow.clearance)))
+  cfg.lights.spacing = Math.max(3, Math.min(30, Math.round(cfg.lights.spacing)))
+  for (const k of ['far', 'mid', 'near'] as const) {
+    // glyphs must be exactly one cell wide; fall back otherwise
+    if ([...cfg.snow.glyphs[k]].length !== 1) cfg.snow.glyphs[k] = DEFAULTS.snow.glyphs[k]
+  }
+  return cfg
+}
+
+export function readConfigFile(file = configPath(), warn: (m: string) => void = () => {}): unknown {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') warn(`config unreadable: ${String(e)}`)
+    return {}
+  }
+}
+
+/** calls `onChange` (debounced) when the config file is edited */
+export function watchConfig(onChange: () => void, file = configPath()): () => void {
+  let timer: NodeJS.Timeout | null = null
+  let watcher: fs.FSWatcher | null = null
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    watcher = fs.watch(path.dirname(file), (_e, name) => {
+      if (name && name !== path.basename(file)) return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(onChange, 150)
+    })
+  } catch {
+    /* no live reload */
+  }
+  return () => {
+    if (timer) clearTimeout(timer)
+    watcher?.close()
+  }
+}
