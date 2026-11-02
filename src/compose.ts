@@ -10,6 +10,7 @@ import { drawWords } from './fx/words.js'
 import { Flyby } from './fx/sleigh.js'
 import { Snow } from './fx/snow.js'
 import { Toast } from './fx/toast.js'
+import { Watermark } from './fx/watermark.js'
 import type { CursorState } from './render.js'
 import { Scene, emptyScene, scanScene } from './scene.js'
 
@@ -22,6 +23,9 @@ export class Compositor {
   readonly snow: Snow
   readonly flyby: Flyby
   readonly toast = new Toast()
+  private readonly watermark = new Watermark()
+  /** which CLI is being drawn; the Codex logo backdrop only applies to codex */
+  agent: 'claude' | 'codex' = 'claude'
   private base = new Grid(1, 1)
   private out = new Grid(1, 1)
   private scene: Scene = emptyScene(this.out)
@@ -69,6 +73,7 @@ export class Compositor {
     emu.snapshot(base)
     out.clear()
     out.blit(base, this.top)
+    if (this.agent === 'codex' && this.cfg.codex.logo) this.watermark.capture(out)
 
     const dt = this.lastNow ? (nowMs - this.lastNow) / 1000 : 0
     this.lastNow = nowMs
@@ -97,6 +102,7 @@ export class Compositor {
       this.snow.draw(out, scene, cursor.visible ? cursor : undefined)
       drawBand(out, 0, this.t, nowMs, this.cfg.band)
       if (this.cfg.toast) this.toast.draw(out, nowMs)
+      if (this.agent === 'codex' && this.cfg.codex.logo) this.watermark.draw(out)
     }
     return { grid: out, cursor }
   }

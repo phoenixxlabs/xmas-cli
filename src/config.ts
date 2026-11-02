@@ -28,7 +28,7 @@ export interface Config {
   agent: 'claude' | 'codex'
   /** skip permission prompts (claude --dangerously-skip-permissions / codex bypass) */
   yolo: boolean
-  codex: { bin: string | null }
+  codex: { bin: string | null; /** keep Codex's startup logo as a dim backdrop */ logo: boolean }
   claude: {
     bin: string | null
     injectSettings: boolean
@@ -59,7 +59,7 @@ export const DEFAULTS: Config = {
   titlePrefix: '❄ ',
   agent: 'claude',
   yolo: true,
-  codex: { bin: null },
+  codex: { bin: null, logo: true },
   claude: { bin: null, injectSettings: true, settings: {} },
   hotkeys: { snow: 'ctrl+alt+s', lights: 'ctrl+alt+l', preset: 'ctrl+alt+p', flyby: 'ctrl+alt+r' },
 }
