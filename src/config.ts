@@ -7,6 +7,7 @@ import type { LogoConfig } from './fx/logo.js'
 import type { BandConfig } from './fx/frame.js'
 import type { WordsConfig } from './fx/words.js'
 import type { FlybyConfig } from './fx/sleigh.js'
+import type { VisitConfig } from './fx/visit.js'
 
 export type PresetName = 'calm' | 'festive' | 'max'
 export const PRESET_ORDER: PresetName[] = ['calm', 'festive', 'max']
@@ -20,6 +21,7 @@ export interface Config {
   band: BandConfig
   words: WordsConfig
   flyby: FlybyConfig
+  visit: VisitConfig
   /** a gust of snow when a turn finishes */
   burst: boolean
   toast: boolean
@@ -35,7 +37,7 @@ export interface Config {
     /** merged over the winter defaults in the injected --settings file */
     settings: Record<string, unknown>
   }
-  hotkeys: { snow: string; lights: string; preset: string; flyby: string }
+  hotkeys: { snow: string; lights: string; preset: string; flyby: string; visit: string }
 }
 
 export const DEFAULTS: Config = {
@@ -54,6 +56,7 @@ export const DEFAULTS: Config = {
   band: { enabled: false, text: 'Merry Christmas · {countdown}' },
   words: { enabled: true },
   flyby: { enabled: true, minGap: 120, maxGap: 360, items: true },
+  visit: { enabled: true, minGap: 240, maxGap: 600 },
   burst: true,
   toast: true,
   titlePrefix: '❄ ',
@@ -61,7 +64,13 @@ export const DEFAULTS: Config = {
   yolo: true,
   codex: { bin: null, logo: true },
   claude: { bin: null, injectSettings: true, settings: {} },
-  hotkeys: { snow: 'ctrl+alt+s', lights: 'ctrl+alt+l', preset: 'ctrl+alt+p', flyby: 'ctrl+alt+r' },
+  hotkeys: {
+    snow: 'ctrl+alt+s',
+    lights: 'ctrl+alt+l',
+    preset: 'ctrl+alt+p',
+    flyby: 'ctrl+alt+r',
+    visit: 'ctrl+alt+v',
+  },
 }
 
 type Deep<T> = { [K in keyof T]?: T[K] extends object ? Deep<T[K]> : T[K] }
@@ -73,6 +82,7 @@ export const PRESETS: Record<PresetName, Deep<Config>> = {
     lights: { spacing: 9 },
     burst: false,
     flyby: { enabled: false },
+    visit: { enabled: false },
   },
   festive: {},
   max: {
@@ -132,6 +142,8 @@ export function resolveConfig(
   cfg.snow.clearance = Math.max(0, Math.min(6, Math.round(cfg.snow.clearance)))
   cfg.flyby.minGap = Math.max(10, cfg.flyby.minGap)
   cfg.flyby.maxGap = Math.max(cfg.flyby.minGap, cfg.flyby.maxGap)
+  cfg.visit.minGap = Math.max(10, cfg.visit.minGap)
+  cfg.visit.maxGap = Math.max(cfg.visit.minGap, cfg.visit.maxGap)
   cfg.lights.spacing = Math.max(3, Math.min(30, Math.round(cfg.lights.spacing)))
   for (const k of ['far', 'mid', 'near'] as const) {
     // glyphs must be exactly one cell wide; fall back otherwise

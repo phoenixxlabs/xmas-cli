@@ -7,6 +7,7 @@
 
 import { A_BOLD, Color, Grid, hex, mix } from '../grid.js'
 import type { Scene } from '../scene.js'
+import { paintPixels } from './pixels.js'
 import { mulberry32 } from './rng.js'
 
 export interface FlybyConfig {
@@ -14,21 +15,8 @@ export interface FlybyConfig {
   /** seconds between flights: a random gap between these two */
   minGap: number
   maxGap: number
-  /** let gifts, carrots and cookies fall off the sleigh */
+  /** let presents fall off the sleigh */
   items: boolean
-}
-
-const PIXEL: Record<string, Color> = {
-  R: hex('#e8404f'), // coat, hat, sleigh
-  r: hex('#a52a3a'), // sleigh shadow
-  W: hex('#f6f9ff'), // fur, beard
-  S: hex('#f3c9a5'), // face
-  K: hex('#23232e'), // eyes
-  Y: hex('#f2c14e'), // runners, reins, belt
-  T: hex('#d9b98a'), // sack
-  B: hex('#b07a4c'), // reindeer coat
-  b: hex('#6e4a2e'), // antlers, legs
-  N: hex('#ff3b4d'), // the red nose
 }
 
 // Santa is 8 pixels wide and sits on top of the sleigh, which starts at pixel row 8.
@@ -65,22 +53,15 @@ const ROWS = 14 // pixel rows; the terminal rows are half of this
 const HEIGHT = ROWS / 2
 const REIN_ROW = 11
 
-interface Item {
+interface Present {
   x: number
   y: number
   vx: number
   vy: number
-  ch: string
   color: Color
 }
 
-const ITEMS: [string, Color][] = [
-  ['▣', hex('#ff6b7a')], // gift
-  ['▣', hex('#6cc4ff')],
-  ['▣', hex('#46d68c')],
-  ['▾', hex('#ff9f43')], // carrot
-  ['●', hex('#c8955a')], // cookie
-]
+const PRESENTS = ['#ff6b7a', '#6cc4ff', '#46d68c', '#f2c14e', '#d58bff'].map((c) => hex(c))
 
 const SPARKS = ['·', '.', '*']
 const SPARK_COLOR = hex('#bfe3ff')
@@ -113,7 +94,7 @@ export class Flyby {
   private nextAt: number
   private lastEnd = 0
   private active: { x: number; y: number; width: number; deer: number } | null = null
-  private items: Item[] = []
+  private items: Present[] = []
   private itemTimer = 0
   private cache = new Map<string, string[]>()
 
@@ -218,13 +199,12 @@ export class Flyby {
     this.itemTimer -= dt
     if (this.itemTimer > 0 || this.items.length >= 8) return
     this.itemTimer = 0.9 + this.rng() * 1.2
-    const [ch, color] = ITEMS[Math.floor(this.rng() * ITEMS.length)]!
+    const color = PRESENTS[Math.floor(this.rng() * PRESENTS.length)]!
     this.items.push({
       x: f.x + 6 + this.rng() * 8,
       y: f.y + HEIGHT,
       vx: -2.5 - this.rng() * 2,
       vy: 3 + this.rng() * 1.5,
-      ch,
       color,
     })
   }
@@ -285,21 +265,9 @@ export class Flyby {
         }
       }
 
-      const art = this.frame(f.deer, Math.floor(t * 5.5) % 2)
-      for (let cy = 0; cy < HEIGHT; cy++) {
-        const top = art[cy * 2]!
-        const bottom = art[cy * 2 + 1]!
-        for (let x = 0; x < top.length; x++) {
-          const a = top[x] === '.' ? 0 : PIXEL[top[x]!]!
-          const b = bottom[x] === '.' ? 0 : PIXEL[bottom[x]!]!
-          if (!a && !b) continue
-          if (a && b) put(x0 + x, f.y + cy, a === b ? '█' : '▀', a, a === b ? 0 : b)
-          else if (a) put(x0 + x, f.y + cy, '▀', a)
-          else put(x0 + x, f.y + cy, '▄', b)
-        }
-      }
+      paintPixels(g, this.frame(f.deer, Math.floor(t * 5.5) % 2), x0, f.y, floor)
     }
 
-    for (const it of this.items) put(Math.round(it.x), Math.floor(it.y), it.ch, it.color, 0, A_BOLD)
+    for (const it of this.items) put(Math.round(it.x), Math.floor(it.y), '▣', it.color, 0, A_BOLD)
   }
 }

@@ -39,6 +39,7 @@ xmas --xmas-doctor
 | `xmas sessions [--all]` | List saved sessions; `--all` covers every folder       |
 | `xmas --safe`           | Keep the agent's own permission prompts                |
 | `xmas --sleigh`         | Send the sleigh across right away                      |
+| `xmas --santa`          | Have the little Santa visit right away                 |
 | `xmas --calm`           | A quieter look (`--festive` sits in between)           |
 
 "Skipping permission prompts" means `claude --dangerously-skip-permissions` and
@@ -56,11 +57,12 @@ directly with no wrapper. When a session ends, xmas prints its id and the comman
 - **Lights** string along Claude's rules and chase while a turn is running.
 - **Mascot** gets a red coat and a Santa hat.
 - **Words**: spinner verbs, tips and the finished-turn line are swapped for winter ones.
-- **Sleigh**: every few minutes (and sometimes when a turn finishes) a sleigh and reindeer fly through empty rows, dropping the odd gift, carrot and cookie. They only use blank cells, so they never cover text. Off in the `--calm` look.
+- **Sleigh**: every few minutes (and sometimes when a turn finishes) a sleigh and reindeer fly through the highest empty rows, dropping presents. They only use blank cells, so they never cover text. Off in the `--calm` look.
+- **Visitor**: now and then a small Santa walks along the bottom, eats the cookies left out for him, takes the reindeer's carrot, says ho ho ho and leaves a present. `xmas --santa` calls him now.
 - **Codex logo**: Codex wipes its startup logo after a couple of seconds; xmas keeps a dim copy behind everything, so snow and the sleigh pass in front of it. Turn it off with `"codex": { "logo": false }`.
 - **Band** (the `--max` look): a greeting and countdown across the top row.
 
-Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look, `Ctrl+Alt+R` call the sleigh now.
+Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look, `Ctrl+Alt+R` call the sleigh now, `Ctrl+Alt+V` call the visitor.
 
 ## Config
 

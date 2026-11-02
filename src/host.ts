@@ -24,6 +24,8 @@ export interface HostOptions {
   agent?: 'claude' | 'codex'
   /** fly the sleigh as soon as there is room, instead of waiting for the first gap */
   sleigh?: boolean
+  /** have the little Santa visit as soon as there is room */
+  visit?: boolean
 }
 
 const MIN_FRAME_MS = 8
@@ -40,6 +42,7 @@ export function runHost(opts: HostOptions): Promise<number> {
     comp.onEvent = (m) => log(m)
     comp.agent = opts.agent ?? 'claude'
     if (opts.sleigh) comp.flyby.trigger(1.5)
+    if (opts.visit) comp.visit.trigger(1.5)
 
     let focused = true
     let finished = false
@@ -130,6 +133,9 @@ export function runHost(opts: HostOptions): Promise<number> {
       } else if (name === 'flyby') {
         comp.flyby.trigger()
         comp.toast.show('here they come', now)
+      } else if (name === 'visit') {
+        comp.visit.trigger()
+        comp.toast.show('someone is at the door', now)
       } else if (name === 'preset') {
         preset = PRESET_ORDER[(PRESET_ORDER.indexOf(preset) + 1) % PRESET_ORDER.length]!
         const warn = (m: string) => log(`config: ${m}`)

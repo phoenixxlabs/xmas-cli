@@ -34,7 +34,7 @@ function helpText(): string {
     row('--calm --festive --max', 'pick a look'),
     row('--no-snow --no-lights', 'switch single effects off'),
     row('--no-logo --band', 'hat off / greeting band on'),
-    row('--sleigh', 'send the sleigh across right away'),
+    row('--sleigh --santa', 'send the sleigh / the visitor right away'),
     row('--xmas-doctor', 'check the install (also --xmas-config, --xmas-version)'),
     rule(),
     frost(`Anything else goes to the agent; its own flags: ${ice('xmas --claude --help')}`),
@@ -50,6 +50,7 @@ interface Parsed {
   resume?: true | string
   last: boolean
   sleigh: boolean
+  santa: boolean
   noSnow: boolean
   noLights: boolean
   noLogo: boolean
@@ -67,6 +68,7 @@ interface Parsed {
 export function parseArgs(argv: string[]): Parsed {
   const p: Parsed = {
     sleigh: false,
+    santa: false,
     last: false,
     noSnow: false,
     noLights: false,
@@ -102,6 +104,7 @@ export function parseArgs(argv: string[]): Parsed {
     else if (a === '--no-logo') p.noLogo = true
     else if (a === '--band') p.band = true
     else if (a === '--sleigh') p.sleigh = true
+    else if (a === '--santa') p.santa = true
     else if (a === '--xmas-plain') p.plain = true
     else if (a === '--xmas-no-settings') p.noSettings = true
     else if (a === '--xmas-doctor') p.doctor = true
@@ -213,6 +216,7 @@ export async function main(): Promise<number> {
     if (p.noLogo) cfg.logo.enabled = false
     if (p.band) cfg.band.enabled = true
     if (p.sleigh) cfg.flyby.enabled = true
+    if (p.santa) cfg.visit.enabled = true
   }
   const file = readConfigFile(undefined, warn)
   const filePreset = typeof (file as { preset?: unknown })?.preset === 'string'
@@ -278,6 +282,7 @@ export async function main(): Promise<number> {
     plain: p.plain,
     agent,
     sleigh: p.sleigh,
+    visit: p.santa,
   })
   if (tty && !p.plain) {
     try {

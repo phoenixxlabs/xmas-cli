@@ -9,6 +9,7 @@ import { drawLogo } from './fx/logo.js'
 import { drawWords } from './fx/words.js'
 import { Flyby } from './fx/sleigh.js'
 import { Snow } from './fx/snow.js'
+import { VisitingSanta } from './fx/visit.js'
 import { Toast } from './fx/toast.js'
 import { Watermark } from './fx/watermark.js'
 import type { CursorState } from './render.js'
@@ -22,6 +23,7 @@ export interface FrameResult {
 export class Compositor {
   readonly snow: Snow
   readonly flyby: Flyby
+  readonly visit: VisitingSanta
   readonly toast = new Toast()
   private readonly watermark = new Watermark()
   /** which CLI is being drawn; the Codex logo backdrop only applies to codex */
@@ -42,12 +44,14 @@ export class Compositor {
   constructor(public cfg: Config) {
     this.snow = new Snow(cfg.snow)
     this.flyby = new Flyby(cfg.flyby)
+    this.visit = new VisitingSanta(cfg.visit)
   }
 
   setConfig(cfg: Config): void {
     this.cfg = cfg
     this.snow.cfg = cfg.snow
     this.flyby.cfg = cfg.flyby
+    this.visit.cfg = cfg.visit
   }
 
   resize(cols: number, rows: number, top: number, childRows: number): void {
@@ -58,6 +62,7 @@ export class Compositor {
     this.sceneVersion = -1
     this.snow.resize(cols, rows)
     this.flyby.resize(cols)
+    this.visit.resize()
   }
 
   get currentScene(): Scene {
@@ -96,9 +101,11 @@ export class Compositor {
       drawLights(out, scene, this.t, scene.working, this.cfg.lights)
       if (opts.animate) {
         this.flyby.update(dt, out, scene)
+        this.visit.update(dt, out, scene)
         this.snow.update(dt, scene)
       }
       this.flyby.draw(out, scene, this.t)
+      this.visit.draw(out, scene)
       this.snow.draw(out, scene, cursor.visible ? cursor : undefined)
       drawBand(out, 0, this.t, nowMs, this.cfg.band)
       if (this.cfg.toast) this.toast.draw(out, nowMs)
@@ -128,6 +135,12 @@ export class Compositor {
 
   /** true while something on screen keeps changing by itself */
   get isAnimated(): boolean {
-    return this.cfg.snow.enabled || this.cfg.lights.enabled || this.cfg.band.enabled || this.cfg.flyby.enabled
+    return (
+      this.cfg.snow.enabled ||
+      this.cfg.lights.enabled ||
+      this.cfg.band.enabled ||
+      this.cfg.flyby.enabled ||
+      this.cfg.visit.enabled
+    )
   }
 }
