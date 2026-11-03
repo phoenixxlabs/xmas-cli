@@ -38,6 +38,8 @@ xmas --xmas-doctor
 | `xmas --continue`       | Continue the most recent session (`--last` also works) |
 | `xmas sessions [--all]` | List saved sessions; `--all` covers every folder       |
 | `xmas --safe`           | Keep the agent's own permission prompts                |
+| `xmas --sleigh`         | Send the sleigh across right away                      |
+| `xmas --santa`          | Have the little Santa visit right away                 |
 | `xmas --calm`           | A quieter look (`--festive` sits in between)           |
 
 "Skipping permission prompts" means `claude --dangerously-skip-permissions` and
@@ -50,14 +52,25 @@ directly with no wrapper. When a session ends, xmas prints its id and the comman
 
 ## What you get
 
-- **Snow** falls in empty space only: never over text, never in the prompt box. Flakes that reach one of
-  Claude's rules settle into small drifts and melt.
-- **Lights** string along Claude's rules and chase while a turn is running.
-- **Mascot** gets a red coat and a Santa hat.
-- **Words**: spinner verbs, tips and the finished-turn line are swapped for winter ones.
-- **Band** (the `--max` look): a greeting and countdown across the top row.
+Snow falls in empty space only, never over text and never in the prompt box. Flakes that reach one of
+Claude's rules settle into small drifts and melt. Lights run along the same rules and chase while a
+turn is running. The mascot gets a red coat and a Santa hat, and the spinner verbs, tips and the
+finished-turn line are swapped for winter ones. The `--max` look adds a greeting and countdown across
+the top row.
 
-Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look.
+A few things happen now and then:
+
+- A sleigh and reindeer fly through the highest empty rows, dropping presents. This happens every few
+  minutes and sometimes when a turn finishes. It's off in the `--calm` look.
+- A small Santa walks along the bottom to one treat left out for him (cookies, milk, cocoa or the
+  reindeer's carrot), finishes it, says thanks and leaves a present. It's a different treat each time.
+  `xmas --santa` calls him straight away.
+- Codex wipes its startup logo after a couple of seconds. xmas keeps a dim copy behind everything, so
+  the snow and the sleigh pass in front of it. Set `"codex": { "logo": false }` to turn that off.
+
+Everything here only paints blank cells, so none of it covers text.
+
+Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycle the look, `Ctrl+Alt+R` call the sleigh now, `Ctrl+Alt+V` call the visitor.
 
 ## Config
 
@@ -71,7 +84,7 @@ Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycl
   "snow": { "enabled": true, "density": 0.011, "wind": 1 },
   "lights": { "enabled": true, "spacing": 7 },
   "claude": { "bin": null, "settings": {} },
-  "codex": { "bin": null }
+  "codex": { "bin": null, "logo": true }
 }
 ```
 
@@ -79,9 +92,21 @@ Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycl
 `{ "editorMode": "vim" }`. `XMAS_CLAUDE_BIN` and `XMAS_CODEX_BIN` override which binary is run.
 `xmas --xmas-config` prints the file path.
 
+## Updates
+
+Once a day xmas looks up the newest versions of itself, Claude Code and Codex. When one is behind you
+get a note in the corner of the screen and again when you quit, and `xmas --xmas-update` pulls the
+latest xmas and rebuilds it. If Claude or Codex is behind, xmas asks `update now? [y/N]` before it
+starts the agent. Nothing is installed without a yes, and a no is remembered until the next release.
+Codex is only updated when it came from npm; other installs just get a reminder.
+
+Turn it off with `"updateCheck": false` in the config, or set `XMAS_NO_UPDATE_CHECK=1`. It is also off
+when `CI` is set.
+
+Links in the agent's output (and plain URLs and file paths that exist) can be opened with Ctrl+click.
+
 ## Known limits
 
-- OSC 8 hyperlinks are not re-emitted, so file links in Claude are not clickable inside xmas.
 - Kitty keyboard and graphics protocols are not passed through.
 - Codex has no horizontal rules or mascot, so it gets snow and the band but no lights or hat.
 - Hotkeys are Alt-based; rebind them in the config if your terminal claims them.

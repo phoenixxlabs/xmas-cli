@@ -1,25 +1,26 @@
-// stdin → child. Almost everything is forwarded byte-for-byte; we only look at:
-//   · our hotkeys (consumed)
-//   · focus reports (used for blur-pausing; forwarded only if the child asked for them)
-//   · SGR mouse reports (row shifted when we reserve rows above the child)
-//   · bracketed paste (never interpreted inside)
-// A lone ESC is held for a few ms in case it starts a sequence, then released.
+// stdin to the child. nearly everything is forwarded untouched. we only look for our hotkeys,
+// focus reports, mouse reports (rows get shifted when we reserve some above the child) and
+// bracketed paste (never looked inside). a lone esc is held back a few ms in case it starts a
+// sequence
 
 export interface InputHooks {
   hotkey(name: string): void
   focus(isFocused: boolean): void
   childWantsFocus(): boolean
-  /** rows we reserve above the child; mouse rows are shifted by this */
+  // rows we reserve above the child, mouse rows are shifted by this
   topOffset(): number
-  /** rows the child occupies (mouse beyond them is dropped) */
+  // rows the child occupies, mouse events below them are dropped
   childRows(): number
+  // the link under a screen cell (0 based), ctrl+click opens it
+  linkAt?(x: number, y: number): string | null
+  open?(uri: string): void
 }
 
 const PASTE_START = '\x1b[200~'
 const PASTE_END = '\x1b[201~'
 const MOUSE = /^\x1b\[<(\d+);(\d+);(\d+)([Mm])$/
 
-/** "ctrl+alt+s" → the bytes a terminal sends for it */
+// turns something like ctrl+alt+s into the bytes a terminal sends for it
 export function hotkeyBytes(spec: string): string | null {
   const parts = spec
     .toLowerCase()
@@ -38,6 +39,7 @@ export function hotkeyBytes(spec: string): string | null {
 export class InputRouter {
   private pending = ''
   private inPaste = false
+  private swallowRelease = false
   private timer: NodeJS.Timeout | null = null
   private hotkeys = new Map<string, string>()
 
@@ -75,7 +77,7 @@ export class InputRouter {
           this.inPaste = false
           continue
         }
-        // hold back a possible partial end marker
+        // might be the start of the end marker, hold it back
         let keep = 0
         for (let k = Math.min(PASTE_END.length - 1, n - i); k > 0; k--) {
           if (PASTE_END.startsWith(buf.slice(n - k))) {
@@ -131,7 +133,7 @@ export class InputRouter {
     }
   }
 
-  /** release whatever is waiting (a lone Esc, or an unfinished sequence) */
+  // let go of anything waiting: a lone esc, or a sequence that never finished
   flush(): void {
     if (this.timer) {
       clearTimeout(this.timer)
@@ -160,6 +162,20 @@ export class InputRouter {
     }
     const m = MOUSE.exec(seq)
     if (m) {
+      const flags = Number(m[1])
+      const plain = (flags & 3) === 0 && (flags & (32 | 64)) === 0
+      if (m[4] === 'm' && this.swallowRelease) {
+        this.swallowRelease = false
+        return ''
+      }
+      if (plain && flags & 16 && m[4] === 'M') {
+        const uri = this.hooks.linkAt?.(Number(m[2]) - 1, Number(m[3]) - 1)
+        if (uri) {
+          this.swallowRelease = true
+          this.hooks.open?.(uri)
+          return ''
+        }
+      }
       const top = this.hooks.topOffset()
       if (top === 0) return seq
       const y = Number(m[3]) - top

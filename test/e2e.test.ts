@@ -124,7 +124,7 @@ afterAll(() => {
   fs.rmSync(tmp, { recursive: true, force: true })
 })
 
-const FLAKES = /[·*❄]/
+const FLAKES = /[·*✶]/
 
 describe('xmas around a fake claude (nested ConPTY)', () => {
   it('shows the child, mirrors input modes, and enters the alt screen', async () => {
@@ -255,7 +255,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
       const g = s.grid()
       let n = 0
       for (let y = 0; y < g.rows; y++)
-        if (FLAKES.test(g.rowText(y).replace(/[·]/g, '').replace(/Try.*/, ''))) n++
+        if (FLAKES.test(g.rowText(y).replace(/[·˙.]/g, '').replace(/Try.*/, ''))) n++
       return n > 0
     }, 'some snow')
     for (let k = 0; k < 20; k++) {
@@ -270,7 +270,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
       const text = 'The quick brown fox jumps over the lazy dog. 好 世界 ✻ é'
       const row = lines.find((l) => l.startsWith('The quick brown'))!
       expect(row.startsWith(text)).toBe(true)
-      expect(row.slice(text.length)).toMatch(/^[ ·*❄]*$/) // only flakes may share the row, in the margin
+      expect(row.slice(text.length)).toMatch(/^[ ·˙.*✶]*$/) // only flakes may share the row, in the margin
     }
   })
 
@@ -286,7 +286,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
     await new Promise((r) => setTimeout(r, 800))
     const t = s.text()
     expect(t).not.toContain('━')
-    expect(t.split('\n').slice(0, 25).join('\n')).not.toMatch(/[*❄]/)
+    expect(t.split('\n').slice(0, 25).join('\n')).not.toMatch(/[*✶]/)
   })
 
   it('the snow hotkey toggles snow and shows a toast', async () => {
@@ -296,7 +296,7 @@ describe('xmas around a fake claude (nested ConPTY)', () => {
     s.send('\x1b\x13')
     await s.waitText('snow off')
     await s.waitFor(
-      () => !/[*❄]/.test(s.text().split('\n').slice(0, 24).join('\n').replace(/Try.*/, '')),
+      () => !/[*✶]/.test(s.text().split('\n').slice(0, 24).join('\n').replace(/Try.*/, '')),
       'snow gone',
     )
     s.send('\x1b\x13')

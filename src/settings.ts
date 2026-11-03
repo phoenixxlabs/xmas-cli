@@ -1,5 +1,5 @@
-// The winter look inside Claude Code itself (theme, spinner words, tips) is delivered with
-// --settings so it only applies to sessions started through xmas.
+// the winter theme, spinner words and tips go in through --settings, so only sessions started
+// with xmas get them
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -39,7 +39,7 @@ export const TIPS = [
 export function winterSettings(cfg: Config): Record<string, unknown> {
   return {
     theme: `custom:${THEME_SLUG}`,
-    // the compositor can only show a viewport, so Claude must own scrolling
+    // we only see a viewport, so claude has to own the scrolling
     tui: 'fullscreen',
     spinnerVerbs: { mode: 'replace', verbs: SPINNER_VERBS },
     spinnerTipsOverride: { excludeDefault: true, label: 'Winter tip', tips: TIPS },
@@ -51,7 +51,7 @@ function assetPath(name: string): string {
   return fileURLToPath(new URL(`../assets/${name}`, import.meta.url))
 }
 
-/** Writes the settings file and makes sure the theme exists. Returns the settings path. */
+// writes the settings file, makes sure the theme is installed and returns the settings path
 export function installWinter(cfg: Config): { settingsPath: string; themePath: string } {
   const dir = configDir()
   fs.mkdirSync(dir, { recursive: true })

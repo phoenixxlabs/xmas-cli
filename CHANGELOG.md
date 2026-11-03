@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- xmas checks once a day for a newer xmas, Claude Code or Codex. It shows a note, `xmas --xmas-update` updates xmas, and Claude and Codex are only updated after you say yes (`updateCheck` in the config, `XMAS_NO_UPDATE_CHECK`).
+- URLs and file paths in the agent's output are links; Ctrl+click opens them, and links the agent sets itself survive the redraw.
+- The sleigh only drops presents. A small Santa now visits along the bottom now and then for one treat at a time (cookies, milk, cocoa or a carrot) (`visit` in the config, `--santa`, `Ctrl+Alt+V`).
+- Codex keeps its startup logo as a dim backdrop (`codex.logo` in the config).
+- `--sleigh` sends the sleigh across right away; it flies at the highest empty rows and dodges text that arrives.
+- A sleigh and reindeer fly across the screen now and then (`flyby` in the config, `Ctrl+Alt+R` to call them).
+
 ## 0.2.0
 
 - Codex support: `xmas --codex`, with `--claude` to switch back and an `agent` config key for the default.

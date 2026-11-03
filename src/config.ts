@@ -6,6 +6,8 @@ import type { LightsConfig } from './fx/lights.js'
 import type { LogoConfig } from './fx/logo.js'
 import type { BandConfig } from './fx/frame.js'
 import type { WordsConfig } from './fx/words.js'
+import type { FlybyConfig } from './fx/sleigh.js'
+import type { VisitConfig } from './fx/visit.js'
 
 export type PresetName = 'calm' | 'festive' | 'max'
 export const PRESET_ORDER: PresetName[] = ['calm', 'festive', 'max']
@@ -18,61 +20,77 @@ export interface Config {
   logo: LogoConfig
   band: BandConfig
   words: WordsConfig
-  /** a gust of snow when a turn finishes */
+  flyby: FlybyConfig
+  visit: VisitConfig
+  // gust of snow when a turn ends
   burst: boolean
   toast: boolean
+  // look for a newer xmas now and then
+  updateCheck: boolean
   titlePrefix: string
-  /** which CLI `xmas` wraps when neither --claude nor --codex is given */
+  // used when neither --claude nor --codex is passed
   agent: 'claude' | 'codex'
-  /** skip permission prompts (claude --dangerously-skip-permissions / codex bypass) */
+  // skip permission prompts
   yolo: boolean
-  codex: { bin: string | null }
+  // logo keeps codex's startup logo as a dim backdrop
+  codex: { bin: string | null; logo: boolean }
   claude: {
     bin: string | null
     injectSettings: boolean
-    /** merged over the winter defaults in the injected --settings file */
+    // merged over the winter defaults
     settings: Record<string, unknown>
   }
-  hotkeys: { snow: string; lights: string; preset: string }
+  hotkeys: { snow: string; lights: string; preset: string; flyby: string; visit: string }
 }
 
 export const DEFAULTS: Config = {
   preset: 'festive',
-  fps: 24,
+  fps: 60,
   snow: {
     enabled: true,
     density: 0.011,
     wind: 1,
     clearance: 2,
     drift: true,
-    glyphs: { far: '·', mid: '*', near: '❄' },
+    glyphs: { far: '·', mid: '*', near: '✶' },
   },
   lights: { enabled: true, spacing: 7 },
   logo: { enabled: true },
   band: { enabled: false, text: 'Merry Christmas · {countdown}' },
   words: { enabled: true },
+  flyby: { enabled: true, minGap: 120, maxGap: 360, items: true },
+  visit: { enabled: true, minGap: 240, maxGap: 600 },
   burst: true,
   toast: true,
+  updateCheck: true,
   titlePrefix: '❄ ',
   agent: 'claude',
   yolo: true,
-  codex: { bin: null },
+  codex: { bin: null, logo: true },
   claude: { bin: null, injectSettings: true, settings: {} },
-  hotkeys: { snow: 'ctrl+alt+s', lights: 'ctrl+alt+l', preset: 'ctrl+alt+p' },
+  hotkeys: {
+    snow: 'ctrl+alt+s',
+    lights: 'ctrl+alt+l',
+    preset: 'ctrl+alt+p',
+    flyby: 'ctrl+alt+r',
+    visit: 'ctrl+alt+v',
+  },
 }
 
 type Deep<T> = { [K in keyof T]?: T[K] extends object ? Deep<T[K]> : T[K] }
 
 export const PRESETS: Record<PresetName, Deep<Config>> = {
   calm: {
-    fps: 12,
+    fps: 30,
     snow: { density: 0.006, wind: 0.4, drift: false },
     lights: { spacing: 9 },
     burst: false,
+    flyby: { enabled: false },
+    visit: { enabled: false },
   },
   festive: {},
   max: {
-    fps: 30,
+    fps: 60,
     snow: { density: 0.022, wind: 1.5 },
     band: { enabled: true },
   },
@@ -89,7 +107,7 @@ export function configPath(): string {
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** copy values from `src` onto a clone of `base`, keeping only keys/types `base` knows */
+// copies values from src onto base, skipping keys base doesn't have and values of the wrong type
 export function overlay<T>(base: T, src: unknown, warn: (m: string) => void, where = ''): T {
   if (!isObj(base) || !isObj(src)) return base
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) }
@@ -126,9 +144,13 @@ export function resolveConfig(
   cfg.fps = Math.max(1, Math.min(60, Math.round(cfg.fps)))
   cfg.snow.density = Math.max(0, Math.min(0.1, cfg.snow.density))
   cfg.snow.clearance = Math.max(0, Math.min(6, Math.round(cfg.snow.clearance)))
+  cfg.flyby.minGap = Math.max(10, cfg.flyby.minGap)
+  cfg.flyby.maxGap = Math.max(cfg.flyby.minGap, cfg.flyby.maxGap)
+  cfg.visit.minGap = Math.max(10, cfg.visit.minGap)
+  cfg.visit.maxGap = Math.max(cfg.visit.minGap, cfg.visit.maxGap)
   cfg.lights.spacing = Math.max(3, Math.min(30, Math.round(cfg.lights.spacing)))
   for (const k of ['far', 'mid', 'near'] as const) {
-    // glyphs must be exactly one cell wide; fall back otherwise
+    // has to be exactly one cell wide
     if ([...cfg.snow.glyphs[k]].length !== 1) cfg.snow.glyphs[k] = DEFAULTS.snow.glyphs[k]
   }
   return cfg
@@ -143,7 +165,7 @@ export function readConfigFile(file = configPath(), warn: (m: string) => void = 
   }
 }
 
-/** calls `onChange` (debounced) when the config file is edited */
+// debounced
 export function watchConfig(onChange: () => void, file = configPath()): () => void {
   let timer: NodeJS.Timeout | null = null
   let watcher: fs.FSWatcher | null = null

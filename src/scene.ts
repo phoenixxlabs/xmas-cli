@@ -1,5 +1,5 @@
-// Reads Claude's screen for the few landmarks the effects care about. Everything here is
-// advisory: if Claude's UI changes and a landmark isn't found, that effect simply idles.
+// finds the landmarks the effects need on claude's screen. all best effort: if the ui changes and
+// something isn't found, that effect just does nothing
 
 import { Grid } from './grid.js'
 
@@ -10,7 +10,7 @@ export interface Rule {
 }
 
 export interface LogoHit {
-  /** column of the mascot's top row start */
+  // column where the mascot's top row starts
   topX: number
   y: number
   x: number
@@ -20,11 +20,11 @@ export interface LogoHit {
 
 export interface Scene {
   rules: Rule[]
-  /** 1 on every cell of a horizontal rule (snow settles on the row above) */
+  // 1 on every cell of a horizontal rule (snow settles on the row above)
   ledge: Uint8Array
-  /** row of the prompt box's upper rule, or -1 */
+  // row of the prompt box's top rule, or -1
   promptTop: number
-  /** rows at or below this are kept free of snow (the prompt box and footer) */
+  // rows from here down stay free of snow (prompt box and footer)
   noSnowFromRow: number
   logo: LogoHit | null
   working: boolean
@@ -78,7 +78,7 @@ export function scanScene(g: Grid, cfg: SceneConfig = DEFAULT_SCENE_CONFIG): Sce
     }
   }
 
-  // prompt box = the last one or two near-full-width rules
+  // the prompt box is the last one or two rules that span nearly the full width
   const wide = scene.rules.filter((r) => r.x1 - r.x0 >= cols * 0.9)
   if (wide.length >= 2) {
     const bottom = wide[wide.length - 1]!
@@ -90,7 +90,7 @@ export function scanScene(g: Grid, cfg: SceneConfig = DEFAULT_SCENE_CONFIG): Sce
     if (scene.promptTop < 0) scene.promptTop = only.y
   }
   if (scene.promptTop < 0) {
-    // codex has no rules: its composer is the bottom-most line that starts with a '›' prompt
+    // codex has no rules, its composer is the lowest line that starts with ›
     for (let y = rows - 1; y >= Math.max(0, rows - 12); y--) {
       if (g.rowText(y).trimStart().startsWith('›')) {
         scene.promptTop = Math.max(0, y - 1)

@@ -69,6 +69,7 @@ describe('cli parsing', () => {
     })
     expect(parseArgs(['-r', '--calm']).resume).toBe(true)
     expect(parseArgs(['--continue']).last).toBe(true)
+    expect(parseArgs(['--sleigh', '--calm'])).toMatchObject({ sleigh: true, rest: [] })
   })
 
   it('passes everything after -- to claude untouched', () => {

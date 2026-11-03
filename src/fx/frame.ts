@@ -1,4 +1,4 @@
-// Optional one-row header band: a string of lights with a greeting.
+// the greeting band along the top row (part of the max look)
 
 import { A_BOLD, Grid, hex, mix } from '../grid.js'
 
@@ -38,7 +38,7 @@ export function drawBand(g: Grid, y: number, t: number, nowMs: number, cfg: Band
     const isBulb = x % 6 === 3
     if (isBulb) {
       const n = Math.floor(x / 6)
-      const level = 0.5 + 0.5 * Math.sin(t * 1.5 + n * 2.3)
+      const level = Math.round((0.5 + 0.5 * Math.sin((Math.floor(t * 4) / 4) * 1.5 + n * 2.3)) * 4) / 4
       g.set(x, y, '━', mix(WIRE, BULBS[n % BULBS.length]!, 0.3 + 0.7 * level), 0, A_BOLD)
     } else {
       g.set(x, y, '─', WIRE)

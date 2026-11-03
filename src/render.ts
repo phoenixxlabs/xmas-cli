@@ -1,5 +1,5 @@
-// Grid → ANSI. Keeps a copy of what the terminal currently shows and emits only the
-// difference, wrapped in synchronized-output markers so the frame lands atomically.
+// grid to ansi. remembers what the terminal shows and writes only the difference, inside
+// synchronized-output markers so a frame lands in one go
 
 import {
   A_BLINK,
@@ -16,6 +16,7 @@ import {
   colorMode,
   colorValue,
 } from './grid.js'
+import { linkUri } from './links.js'
 
 export interface CursorState {
   x: number
@@ -25,7 +26,9 @@ export interface CursorState {
 }
 
 const ESC = '\x1b['
-/** unchanged cells we are willing to rewrite rather than pay for a cursor jump */
+const OSC = '\x1b]'
+const ST = '\x1b\\'
+// unchanged cells we'd rather rewrite than pay for a cursor jump
 const GAP = 4
 
 function colorSgr(c: number, fg: boolean): string {
@@ -71,14 +74,14 @@ export class Renderer {
   private lastCursor: CursorState | null = null
   private lastShape = -1
 
-  /** forget what the terminal shows; the next frame repaints everything */
+  // forget what's on screen, the next frame repaints all of it
   invalidate(): void {
     this.prev = null
     this.lastCursor = null
     this.lastShape = -1
   }
 
-  /** Returns the bytes to write, or '' when the screen and cursor are already right. */
+  // the bytes to write, or '' if nothing changed
   frame(next: Grid, cursor: CursorState | null): string {
     const full = !this.prev || this.prev.cols !== next.cols || this.prev.rows !== next.rows
     const prev = full ? null : this.prev!
@@ -86,12 +89,13 @@ export class Renderer {
     let curX = -1
     let curY = -1
     let styleKey = ''
+    let link = 0
 
     const cols = next.cols
     for (let y = 0; y < next.rows; y++) {
       let x = 0
       while (x < cols) {
-        // find the next changed cell
+        // next changed cell
         let start = -1
         for (; x < cols; x++) {
           const i = y * cols + x
@@ -102,7 +106,7 @@ export class Renderer {
         }
         if (start < 0) break
         if (next.w[y * cols + start] === W_TAIL && start > 0) start--
-        // extend over the changed run, bridging short unchanged gaps
+        // run over the changes, bridging short unchanged gaps
         let end = start
         let probe = start
         while (probe < cols) {
@@ -130,6 +134,12 @@ export class Renderer {
             body += sgr(next.fg[i]!, next.bg[i]!, next.at[i]!)
             styleKey = key
           }
+          const lk = next.lk[i]!
+          if (lk !== link) {
+            const uri = lk ? linkUri(lk) : undefined
+            body += uri ? `${OSC}8;id=x${lk};${uri}${ST}` : `${OSC}8;;${ST}`
+            link = uri ? lk : 0
+          }
           const c = next.ch[i]
           body += c === '' || c === undefined || c === '\0' ? ' ' : c
           curX += next.w[i] === 1 ? 2 : 1
@@ -142,6 +152,7 @@ export class Renderer {
       }
     }
 
+    if (link) body += `${OSC}8;;${ST}`
     if (body) body += `${ESC}0m`
 
     // cursor

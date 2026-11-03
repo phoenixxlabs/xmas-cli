@@ -1,9 +1,9 @@
-// The real terminal: enter/leave the alternate screen, own raw input, mirror the modes
-// the child asked for so mouse / paste / cursor-key input actually arrives.
+// the real terminal: alternate screen, raw input, and passing on the input modes the child asked
+// for so mouse, paste and arrow keys keep working
 
 const ESC = '\x1b['
 
-/** DEC private modes that change what *input* the terminal sends; the child decides them. */
+// dec modes that change what input the terminal sends, the child decides these
 export const MIRRORED_MODES = [1, 1000, 1002, 1003, 1005, 1006, 1015, 1016, 2004] as const
 
 export class OuterTerminal {
@@ -31,11 +31,11 @@ export class OuterTerminal {
       this.inp.setRawMode(true)
     }
     this.inp.resume()
-    // alternate screen, hide cursor, no autowrap (we address every cell), focus reports
+    // alt screen, hide the cursor, no autowrap (we place every cell ourselves), focus reports
     this.out.write(`${ESC}?1049h${ESC}?25l${ESC}?7l${ESC}?1004h${ESC}0m${ESC}2J${ESC}H`)
   }
 
-  /** Apply the child's wanted input modes (diffed against what we already set). */
+  // applies the child's input modes, only the ones that changed
   mirror(modes: ReadonlyMap<number, boolean>): void {
     let s = ''
     for (const m of MIRRORED_MODES) {
