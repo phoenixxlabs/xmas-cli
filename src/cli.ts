@@ -19,6 +19,8 @@ import { berry, brand, frost, ice, pine, rule, snow } from './style.js'
 import { formatSessions, listSessions, sessionSince } from './sessions.js'
 import { AgentName, buildAgentArgs, isAgentInteractive, resolveCodex } from './agent.js'
 import { installWinter } from './settings.js'
+import { offerUpdate, refreshAgent } from './agentupdate.js'
+import { checksAllowed, isNewer, knownUpdate, refresh, selfUpdate } from './update.js'
 
 function helpText(): string {
   const row = (cmd: string, what: string): string => `  ${ice(cmd.padEnd(26))}${frost(what)}`
@@ -36,6 +38,7 @@ function helpText(): string {
     row('--no-logo --band', 'hat off / greeting band on'),
     row('--sleigh --santa', 'send the sleigh / the visitor right away'),
     row('--xmas-doctor', 'check the install (also --xmas-config, --xmas-version)'),
+    row('--xmas-update', 'update xmas to the latest version'),
     rule(),
     frost(`Anything else goes to the agent; its own flags: ${ice('xmas --claude --help')}`),
     frost(`Hotkeys  ${snow('Ctrl+Alt+S')} snow · ${snow('Ctrl+Alt+L')} lights · ${snow('Ctrl+Alt+P')} look`),
@@ -59,6 +62,7 @@ interface Parsed {
   noSettings: boolean
   logFile: string | null
   doctor: boolean
+  update: boolean
   help: boolean
   version: boolean
   showConfig: boolean
@@ -78,6 +82,7 @@ export function parseArgs(argv: string[]): Parsed {
     noSettings: false,
     logFile: null,
     doctor: false,
+    update: false,
     help: false,
     version: false,
     showConfig: false,
@@ -108,6 +113,7 @@ export function parseArgs(argv: string[]): Parsed {
     else if (a === '--xmas-plain') p.plain = true
     else if (a === '--xmas-no-settings') p.noSettings = true
     else if (a === '--xmas-doctor') p.doctor = true
+    else if (a === '--xmas-update') p.update = true
     else if (a === '--xmas-config') p.showConfig = true
     else if (a === '--xmas-version') p.version = true
     else if (a === '--xmas-help') p.help = true
@@ -136,6 +142,13 @@ async function doctor(cfg: Config): Promise<number> {
   const ok = (label: string, good: boolean, detail = '') =>
     lines.push(`${good ? 'ok  ' : 'FAIL'} ${label}${detail ? `  ${detail}` : ''}`)
   ok('node', Number(process.versions.node.split('.')[0]) >= 20, process.version)
+  const latest = await refresh(true)
+  const behind = latest !== null && isNewer(latest, pkgVersion())
+  ok(
+    'xmas',
+    true,
+    behind ? `${pkgVersion()}, ${latest} is out (xmas --xmas-update)` : `${pkgVersion()}, up to date`,
+  )
   ok('platform', true, `${process.platform} ${process.arch}`)
   try {
     await import('node-pty')
@@ -205,7 +218,14 @@ export async function main(): Promise<number> {
   const bare =
     p.rest.length === 1 && (p.rest[0] === '--help' || p.rest[0] === '-h' || p.rest[0] === 'help') && !p.agent
   if (p.help || bare) return (process.stdout.write(`${helpText()}\n`), 0)
-  if (p.version) return (process.stdout.write(`xmas ${pkgVersion()}\n`), 0)
+  if (p.version) {
+    const latest = await refresh(true)
+    const behind = latest !== null && isNewer(latest, pkgVersion())
+    process.stdout.write(
+      `xmas ${pkgVersion()}${behind ? ` (${latest} is out, run xmas --xmas-update)` : ''}\n`,
+    )
+    return 0
+  }
   if (p.showConfig) return (process.stdout.write(`${configPath()}\n`), 0)
 
   const log = createLogger(p.logFile ?? process.env.XMAS_LOG ?? null)
@@ -225,6 +245,20 @@ export async function main(): Promise<number> {
   tweak(cfg)
 
   if (p.doctor) return await doctor(cfg)
+  if (p.update) {
+    const code = selfUpdate()
+    // then the agents, each one only with a yes
+    const bins: [AgentName, string | null][] = [
+      ['claude', resolveClaude(cfg.claude.bin)],
+      ['codex', resolveCodex(cfg.codex.bin)],
+    ]
+    for (const [name, b] of bins) {
+      if (!b) continue
+      await refreshAgent(name, b, { force: true })
+      await offerUpdate(name, b, (s) => `${brand()} ${frost(s)}`)
+    }
+    return code
+  }
 
   const agent: AgentName = p.agent ?? cfg.agent
   if (p.rest[0] === 'sessions') {
@@ -255,6 +289,12 @@ export async function main(): Promise<number> {
   const tty = !!(process.stdin.isTTY && process.stdout.isTTY)
   if (!isAgentInteractive(agent, p.rest, tty)) return direct(bin, p.rest)
 
+  // ask before updating the agent, and look up versions for next time
+  if (checksAllowed(cfg.updateCheck) && !p.plain) {
+    await offerUpdate(agent, bin, (s) => `${brand()} ${frost(s)}`)
+    void refreshAgent(agent, bin)
+  }
+
   let settingsPath: string | null = null
   if (agent === 'claude' && cfg.claude.injectSettings && !p.noSettings) {
     try {
@@ -271,6 +311,12 @@ export async function main(): Promise<number> {
     rest: p.rest,
     settingsPath,
   })
+  // the cache gives today's answer, a stale one is refreshed for next time
+  let update: string | undefined
+  if (checksAllowed(cfg.updateCheck) && tty && !p.plain) {
+    update = knownUpdate(pkgVersion()) ?? undefined
+    void refresh()
+  }
   const started = Date.now()
   const code = await runHost({
     bin,
@@ -283,6 +329,7 @@ export async function main(): Promise<number> {
     agent,
     sleigh: p.sleigh,
     visit: p.santa,
+    update,
   })
   if (tty && !p.plain) {
     try {
@@ -303,6 +350,11 @@ export async function main(): Promise<number> {
     } catch (e) {
       log(`resume hint failed: ${String(e)}`)
     }
+  }
+  if (update) {
+    process.stdout.write(
+      `${brand()} ${frost(`· ${update} is out, update with`)} ${ice('xmas --xmas-update')}\n\n`,
+    )
   }
   return code
 }

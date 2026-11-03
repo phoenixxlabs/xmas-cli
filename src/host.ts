@@ -28,6 +28,8 @@ export interface HostOptions {
   sleigh?: boolean
   // have the little santa visit as soon as there's room
   visit?: boolean
+  // a newer version to mention once the screen is up
+  update?: string
 }
 
 const MIN_FRAME_MS = 8
@@ -45,6 +47,8 @@ export function runHost(opts: HostOptions): Promise<number> {
     comp.agent = opts.agent ?? 'claude'
     if (opts.sleigh) comp.flyby.trigger(1.5)
     if (opts.visit) comp.visit.trigger(1.5)
+    if (opts.update)
+      comp.toast.show(`xmas ${opts.update} is out, run xmas --xmas-update`, Date.now() + 2000, 8000)
 
     let finished = false
     let busy = false

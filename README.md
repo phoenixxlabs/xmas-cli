@@ -92,9 +92,21 @@ Hotkeys while running: `Ctrl+Alt+S` snow, `Ctrl+Alt+L` lights, `Ctrl+Alt+P` cycl
 `{ "editorMode": "vim" }`. `XMAS_CLAUDE_BIN` and `XMAS_CODEX_BIN` override which binary is run.
 `xmas --xmas-config` prints the file path.
 
+## Updates
+
+Once a day xmas looks up the newest versions of itself, Claude Code and Codex. When one is behind you
+get a note in the corner of the screen and again when you quit, and `xmas --xmas-update` pulls the
+latest xmas and rebuilds it. If Claude or Codex is behind, xmas asks `update now? [y/N]` before it
+starts the agent. Nothing is installed without a yes, and a no is remembered until the next release.
+Codex is only updated when it came from npm; other installs just get a reminder.
+
+Turn it off with `"updateCheck": false` in the config, or set `XMAS_NO_UPDATE_CHECK=1`. It is also off
+when `CI` is set.
+
+Links in the agent's output (and plain URLs and file paths that exist) can be opened with Ctrl+click.
+
 ## Known limits
 
-- OSC 8 hyperlinks are not re-emitted, so file links in Claude are not clickable inside xmas.
 - Kitty keyboard and graphics protocols are not passed through.
 - Codex has no horizontal rules or mascot, so it gets snow and the band but no lights or hat.
 - Hotkeys are Alt-based; rebind them in the config if your terminal claims them.

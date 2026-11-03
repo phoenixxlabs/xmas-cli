@@ -25,6 +25,8 @@ export interface Config {
   // gust of snow when a turn ends
   burst: boolean
   toast: boolean
+  // look for a newer xmas now and then
+  updateCheck: boolean
   titlePrefix: string
   // used when neither --claude nor --codex is passed
   agent: 'claude' | 'codex'
@@ -60,6 +62,7 @@ export const DEFAULTS: Config = {
   visit: { enabled: true, minGap: 240, maxGap: 600 },
   burst: true,
   toast: true,
+  updateCheck: true,
   titlePrefix: '❄ ',
   agent: 'claude',
   yolo: true,
